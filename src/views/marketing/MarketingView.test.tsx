@@ -31,9 +31,14 @@ const overview: MarketingOverview = {
         previous: { visitors: 100, visits: 120, pageviews: 260, bounceRate: 39, visitDuration: 80, events: 320 },
         trend: [{ date: '2026-09-01', visitors: 20, pageviews: 51 }],
         pages: [{ label: '/plattform/neuteile', visitors: 62, pageviews: 140 }],
+        entryPages: [{ label: '/plattform/neuteile', visitors: 57, visits: 61 }],
         sources: [{ label: 'Google', visitors: 54 }],
+        channels: [{ label: 'SEO / organische Suche', visitors: 54, visits: 60 }, { label: 'Kaltakquise', visitors: 7, visits: 8 }],
+        attribution: [{ channel: 'Kaltakquise', rawChannel: 'Email', source: 'crm-kaltakquise', medium: 'email', campaign: 'kaltakquise', content: 'elias.zafar', entryPage: '/', visitors: 7, visits: 8 }],
+        pagesByChannel: [{ channel: 'Kaltakquise', page: '/preise', visitors: 5, pageviews: 8 }],
         regions: [{ label: 'Nordrhein-Westfalen, Deutschland', country: 'Deutschland', region: 'Nordrhein-Westfalen', visitors: 48 }],
-        clicks: [{ page: '/', target: 'Beratung', placement: 'header', destination: '/beratung', kind: 'internal', clicks: 19 }],
+        clicks: [{ channel: 'Kaltakquise', page: '/', target: 'Beratung', placement: 'header', destination: '/beratung', kind: 'internal', clicks: 19 }],
+        acquisition: { organicVisits: 60, coldOutreachVisits: 8, directVisits: 30, paidVisits: 12 },
     },
     ads: { google: { accountName: 'Partsunion DE', currency: 'EUR', summary, campaigns: [{ provider: 'google', id: '123', name: 'Neuteile Suche', status: 'ENABLED', currency: 'EUR', dailyBudget: 50, budgetEditable: true, ...summary }] } },
 };
@@ -56,6 +61,10 @@ describe('MarketingView', () => {
         expect(await screen.findByText('Neuteile Suche')).toBeInTheDocument();
         expect(screen.getByText('Nordrhein-Westfalen, Deutschland')).toBeInTheDocument();
         expect(screen.getByText('Beratung')).toBeInTheDocument();
+        expect(screen.getByText('crm-kaltakquise')).toBeInTheDocument();
+        expect(screen.getByText('elias.zafar')).toBeInTheDocument();
+        expect(screen.getByText('/preise')).toBeInTheDocument();
+        expect(screen.getByText(/Vollständige IP-Adressen werden nicht gespeichert/)).toBeInTheDocument();
         expect(await screen.findByRole('button', { name: /Anmelden & verbinden/i })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Pausieren' }));
         expect(screen.getByRole('heading', { name: 'Kampagne pausieren?' })).toBeInTheDocument();
