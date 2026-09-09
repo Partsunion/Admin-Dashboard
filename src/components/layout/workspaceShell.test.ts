@@ -16,7 +16,9 @@ describe('Shared internal shell contract', () => {
         const normalize = (file: string) => readFileSync(file, 'utf8')
             .replace(/\r\n/g, '\n')
             .replace('border-white/[0.08]', 'border-[rgb(var(--admin-nav-overlay)/0.08)]')
-            .replace('ring-white/15', 'ring-[rgb(var(--admin-nav-overlay)/0.15)]').trim();
+            .replace('ring-white/15', 'ring-[rgb(var(--admin-nav-overlay)/0.15)]')
+            .replace('border-overlay/[0.08]', 'border-[rgb(var(--admin-nav-overlay)/0.08)]')
+            .replace('ring-overlay/15', 'ring-[rgb(var(--admin-nav-overlay)/0.15)]').trim();
         const tokens = readFileSync('src/design-system/tokens.css', 'utf8');
         expect(tokens.match(/--admin-nav-overlay\s*:[^;]+;/g)).toEqual(['--admin-nav-overlay: 255 255 255;']);
         expect(normalize(crm)).toBe(normalize('src/components/layout/workspaceShell.ts'));
