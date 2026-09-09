@@ -1,0 +1,76 @@
+.sales-ranking {
+  --rank-surface: hsl(var(--bg-surface));
+  --rank-text: hsl(var(--text-primary));
+  --rank-muted: hsl(var(--text-muted));
+  --rank-border: hsl(var(--border));
+  --rank-accent: hsl(var(--accent-500));
+  color: var(--rank-text);
+  min-width: 0;
+  margin-bottom: 24px;
+  border-block: 1px solid var(--rank-border);
+}
+.sales-ranking-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0 10px; }
+.sales-ranking-eyebrow { display: block; font-size: 10px; font-weight: 650; letter-spacing: .13em; color: var(--rank-muted); }
+.sales-ranking-heading h2 { display: flex; align-items: center; gap: 10px; margin-top: 4px; font-size: 20px; font-weight: 650; letter-spacing: -.035em; }
+.sales-ranking-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--rank-accent); }
+.sales-ranking-controls, .sales-ranking-pagination, .sales-ranking-person { display: flex; align-items: center; gap: 10px; }
+.sales-ranking-tabs { display: flex; border-bottom: 1px solid var(--rank-border); }
+.sales-ranking-tabs button { padding: 8px 13px; font-size: 12px; color: var(--rank-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.sales-ranking-tabs button[aria-pressed="true"] { color: var(--rank-text); border-color: var(--rank-accent); font-weight: 650; }
+.sales-ranking-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; color: var(--rank-muted); flex-shrink: 0; }
+.sales-ranking button { cursor: pointer; }
+.sales-ranking button:hover:not(:disabled) { color: var(--rank-accent); }
+.sales-ranking button:disabled { opacity: .3; cursor: default; }
+.sales-ranking button:focus-visible, .sales-ranking summary:focus-visible, .sales-ranking-scroll:focus-visible { outline: 2px solid var(--rank-accent); outline-offset: 2px; }
+.sales-ranking-period { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 12px; color: var(--rank-muted); font-size: 11px; }
+.sales-ranking-pagination { gap: 3px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sales-ranking-pagination > span { margin-inline: 4px; color: var(--rank-text); font-weight: 550; }
+.sales-ranking-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.sales-ranking-table { width: 100%; border-collapse: collapse; text-align: right; white-space: nowrap; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sales-ranking-table th, .sales-ranking-table td { padding: 9px 16px; border-bottom: 1px solid var(--rank-border); }
+.sales-ranking-table thead th { color: var(--rank-muted); font-size: 10px; font-weight: 550; padding-block: 9px; background: color-mix(in srgb, var(--rank-surface) 65%, transparent); }
+.sales-ranking-table th abbr { text-decoration: none; cursor: help; border-bottom: 1px dotted var(--rank-border); padding-bottom: 2px; }
+.sales-ranking-table th[scope="row"], .sales-ranking-table thead th:nth-child(2) { text-align: left; }
+.sales-ranking-table th[scope="row"] { font-weight: 550; }
+.sales-ranking-table tbody tr:last-child > * { border-bottom: 0; }
+.sales-ranking-table tbody tr:hover { background: color-mix(in srgb, var(--rank-accent) 4%, transparent); }
+.sales-ranking-table tr[data-leader] { background: color-mix(in srgb, var(--rank-accent) 5%, transparent); }
+.sales-ranking-table tr[data-leader] .sales-ranking-place { color: var(--rank-accent); box-shadow: inset 2px 0 0 var(--rank-accent); }
+.sales-ranking-table .sales-ranking-place { text-align: left; width: 40px; padding-inline: 12px; color: var(--rank-muted); font-size: 11px; }
+.sales-ranking-initials { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid var(--rank-border); border-radius: 50%; font-size: 9px; font-weight: 600; color: var(--rank-muted); }
+.sales-ranking-person small { display: block; color: var(--rank-muted); font-size: 10px; }
+.sales-ranking-points { font-size: 14px; font-weight: 650; letter-spacing: -.02em; }
+.sales-ranking-zero { color: var(--rank-muted); }
+.sales-ranking-scroll-hint { display: none; }
+.sales-ranking-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--rank-border); padding: 11px 0; color: var(--rank-muted); font-size: 10px; }
+.sales-ranking-history-button { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--rank-text); font-weight: 550; }
+.sales-ranking-history-button > span { color: var(--rank-muted); font-size: 10px; }
+.sales-ranking-history { padding-bottom: 12px; }
+.sales-ranking-history-caption { caption-side: bottom; text-align: left; white-space: normal; color: var(--rank-muted); font-size: 10px; padding-top: 10px; }
+.sales-ranking-history .sales-ranking-table thead th:first-child { text-align: left; }
+.sales-ranking-week-link { display: inline-flex; align-items: center; gap: 10px; font-weight: 550; }
+.sales-ranking-week-link span, .sales-ranking-week-link small { color: var(--rank-muted); font-size: 10px; font-weight: 400; }
+.sales-ranking-message { padding: 18px 0; color: var(--rank-muted); font-size: 12px; }
+.sales-ranking-link { color: var(--rank-accent); padding-inline: 6px; text-decoration: underline; text-underline-offset: 3px; }
+.sales-ranking-pause, .sales-ranking-footnote { color: var(--rank-muted); font-size: 11px; padding: 10px 0; line-height: 1.6; }
+.sales-ranking-rules { padding-block: 0 12px; font-size: 10px; color: var(--rank-muted); }
+.sales-ranking-rules summary { cursor: pointer; width: fit-content; padding-block: 4px; }
+.sales-ranking-rules > div { max-width: 900px; line-height: 1.7; padding-block: 8px; }
+.sales-ranking-rules p + p, .sales-ranking-rules ul { margin-top: 8px; }
+.sales-ranking-rules ul { padding-left: 16px; list-style: disc; }
+.sales-ranking-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@keyframes sales-ranking-turn { to { transform: rotate(360deg); } }
+.sales-ranking-spin { animation: sales-ranking-turn 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .sales-ranking-spin { animation: none; } }
+@media (max-width: 640px) {
+  .sales-ranking-head { gap: 8px; padding-top: 16px; }
+  .sales-ranking-heading h2 { font-size: 18px; }
+  .sales-ranking-eyebrow { font-size: 9px; letter-spacing: .08em; }
+  .sales-ranking-table th, .sales-ranking-table td { padding-inline: 12px; }
+  .sales-ranking-initials { display: none; }
+  .sales-ranking-period-note { display: none; }
+  .sales-ranking-scroll-hint { display: block; color: var(--rank-muted); font-size: 10px; margin-top: 8px; }
+  .sales-ranking-main-table .sales-ranking-place { position: sticky; left: 0; min-width: 40px; z-index: 1; background: var(--rank-surface); }
+  .sales-ranking-main-table th:nth-child(2) { position: sticky; left: 40px; z-index: 1; background: var(--rank-surface); }
+  .sales-ranking-main-table tr[data-leader] > :nth-child(-n+2) { background: color-mix(in srgb, var(--rank-accent) 7%, var(--rank-surface)); }
+}

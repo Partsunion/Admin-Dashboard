@@ -123,7 +123,7 @@ export default function ErpCenterView(): JSX.Element {
         }] : []),
     ];
 
-    return <div className={SEITEN_RAND}>
+    return <div className={cn(SEITEN_RAND, 'admin-erp-workspace')}>
         <section className="admin-page-intro mb-4 px-5 py-5 md:px-6">
             <div className="flex flex-wrap items-start justify-between gap-5">
                 <div className="min-w-0 flex-1">
@@ -157,7 +157,7 @@ export default function ErpCenterView(): JSX.Element {
         </section>
 
         <div className="mb-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]">
-            <section className="admin-work-panel overflow-hidden" aria-labelledby="erp-flow-title">
+            <section className="admin-work-panel admin-erp-flow overflow-hidden" aria-labelledby="erp-flow-title">
                 <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
                     <div><h2 id="erp-flow-title" className="font-display text-base font-bold">Auftragsfluss</h2><p className="mt-1 text-xs text-text-muted">Aktueller Bestand je operativer Phase</p></div>
                     <Link to="/orders" className="inline-flex items-center gap-1 text-xs font-bold text-accent-500 hover:underline">Vollständige Liste<ArrowUpRight size={13} /></Link>
@@ -181,18 +181,18 @@ export default function ErpCenterView(): JSX.Element {
                 </div>
             </section>
 
-            <section className="admin-work-panel overflow-hidden" aria-labelledby="erp-attention-title">
+            <section className="admin-work-panel admin-erp-attention overflow-hidden" aria-labelledby="erp-attention-title">
                 <header className="border-b border-border px-5 py-4"><h2 id="erp-attention-title" className="font-display text-base font-bold">Handlungsbedarf</h2><p className="mt-1 text-xs text-text-muted">Systemisch priorisierte Betriebsfälle</p></header>
                 {!ordersKnown || !tenantsKnown ? <p className="px-5 py-6 text-sm text-text-muted">Handlungsbedarf wird angezeigt, sobald alle benötigten Quellen geladen sind.</p> : attention.length === 0 ? <div className="flex items-start gap-3 px-5 py-6"><span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-success/10 text-success"><CheckCircle2 size={18} /></span><span><strong className="block text-sm">Keine akuten Betriebsfälle</strong><span className="mt-1 block text-xs leading-relaxed text-text-muted">In den verfügbaren Auftrags- und Händlerdaten wurde kein unmittelbarer Handlungsbedarf gefunden.</span></span></div> : <ul className="divide-y divide-border">{attention.map((item) => <li key={item.title}><Link to={item.to} className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-elevated/60"><span className={cn('mt-1.5 size-2 shrink-0 rounded-full', item.tone === 'danger' ? 'bg-danger' : item.tone === 'warning' ? 'bg-warning' : 'bg-info')} /><span className="min-w-0 flex-1"><strong className="block text-sm leading-snug">{item.title}</strong><span className="mt-1 block text-xs leading-relaxed text-text-muted">{item.detail}</span></span><ArrowUpRight size={14} className="mt-0.5 shrink-0 text-text-faint group-hover:text-text-primary" /></Link></li>)}</ul>}
             </section>
         </div>
 
-        <section className="admin-work-panel mb-5 overflow-hidden" aria-labelledby="erp-orders-title">
+        <section className="admin-work-panel admin-data-table mb-5 overflow-hidden" aria-labelledby="erp-orders-title">
             <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4"><div><h2 id="erp-orders-title" className="font-display text-base font-bold">Zuletzt bearbeitete Aufträge</h2><p className="mt-1 text-xs text-text-muted">Nur aktuell operative Vorgänge</p></div><span className="font-mono text-xs text-text-muted">{ordersKnown ? `${recentOrders.length} angezeigt` : 'Quelle gestört'}</span></header>
             {!ordersKnown ? <p className="px-5 py-7 text-sm text-text-muted">Aufträge konnten nicht geladen werden.</p> : recentOrders.length === 0 ? <p className="px-5 py-7 text-sm text-text-muted">Keine offenen Aufträge vorhanden.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-elevated/55 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted"><tr><th className="px-5 py-3">Auftrag</th><th className="px-4 py-3">Händler</th><th className="px-4 py-3">Teil / OEM</th><th className="px-4 py-3">Status</th><th className="px-5 py-3 text-right">Aktualisiert</th></tr></thead><tbody className="divide-y divide-border">{recentOrders.map((order) => <tr key={order.id} className="transition-colors hover:bg-elevated/50"><td className="px-5 py-3.5"><Link to="/orders" className="font-mono text-xs font-bold text-accent-500 hover:underline">{order.id.slice(0, 10)}</Link><span className="mt-1 block max-w-[180px] truncate text-xs text-text-muted">{order.customer_name || 'Kunde nicht hinterlegt'}</span></td><td className="px-4 py-3.5"><Link to={`/tenants/${encodeURIComponent(order.merchant_id)}`} className="font-medium hover:text-accent-500 hover:underline">{tenantNames.get(String(order.merchant_id)) || order.merchant_id}</Link></td><td className="max-w-[260px] px-4 py-3.5"><span className="block truncate font-medium">{order.requested_part_name || 'Teil nicht hinterlegt'}</span>{order.oem_number && <span className="mt-1 block font-mono text-[11px] text-text-muted">OE {order.oem_number}</span>}</td><td className="px-4 py-3.5"><span className={cn('inline-flex rounded px-2 py-1 text-xs font-semibold', orderStatusBadge(order.status))}>{orderStatusLabel(order.status)}</span></td><td className="px-5 py-3.5 text-right text-xs text-text-muted">{formatRelative(order.updated_at)}</td></tr>)}</tbody></table></div>}
         </section>
 
-        <section className="admin-work-panel overflow-hidden" aria-labelledby="merchant-erp-title">
+        <section className="admin-work-panel admin-erp-selector overflow-hidden" aria-labelledby="merchant-erp-title">
             <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
                 <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-500/10 text-accent-500"><Boxes size={20} /></span><div><h2 id="merchant-erp-title" className="font-display text-base font-bold">Händler-Warenwirtschaft</h2><p className="mt-1 text-xs text-text-muted">Lager, Rechnungen, Einkauf und Aufträge eines Betriebs</p></div></div>
                 <label className="flex min-w-[260px] flex-col gap-1.5 text-xs font-semibold text-text-secondary"><span>Händler auswählen</span><select value={selectedExists ? selectedTenant : ''} onChange={(event) => selectTenant(event.target.value)} className="h-10 rounded-md border border-border-strong bg-surface px-3 text-sm font-medium text-text-primary focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/20"><option value="">Betrieb auswählen…</option>{tenantsQuery.tenants.map((tenant) => <option key={String(tenant.id)} value={String(tenant.id)}>{tenant.name}</option>)}</select></label>

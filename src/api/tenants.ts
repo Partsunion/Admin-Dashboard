@@ -84,6 +84,7 @@ export interface TenantTaxInput {
 }
 
 export async function createTenant(data: {
+    demo?: { days: number };
     name: string;
     email: string;
     website?: string;

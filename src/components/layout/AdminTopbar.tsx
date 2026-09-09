@@ -5,8 +5,9 @@
  * Adapted from User-Dashboard `layout/TopbarV2.tsx` for Admin context.
  */
 
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   Briefcase,
   LogOut,
@@ -26,8 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
 import { useActiveImpersonation } from '@/hooks/useActiveImpersonation';
-import { clearActiveImpersonation } from '@/lib/impersonationSession';
-import { apiFetch } from '@/api/client';
+import { endImpersonation } from '@/hooks/useImpersonate';
 import { useOffeneSachen } from '@/hooks/useOffeneSachen';
 import { NotificationsBell } from './NotificationsBell';
 import { ErscheinungsbildKnopf } from './ErscheinungsbildKnopf';
@@ -141,6 +141,7 @@ export function AdminTopbar({
   const { ungeleseneMails, fehlgeschlageneAnfragen } = useOffeneSachen();
   const { user, logout } = useAuth();
   const impersonation = useActiveImpersonation();
+  const [endingImpersonation, setEndingImpersonation] = useState(false);
 
   const handleLogout = async (): Promise<void> => {
     await logout();
@@ -168,25 +169,25 @@ export function AdminTopbar({
           </span>
           <button
             type="button"
+            disabled={endingImpersonation}
             onClick={async () => {
               // Audit H-1: revoke server-side (blacklist the token) before
               // clearing the local marker, so "exit" is real, not cosmetic.
-              const sid = impersonation?.sessionId;
-              if (sid) {
-                try {
-                  await apiFetch('/api/admin/impersonation/revoke', {
-                    method: 'POST',
-                    body: JSON.stringify({ sessionId: sid }),
-                  });
-                } catch {
-                  /* best-effort — still clear the local marker below */
-                }
+              if (endingImpersonation) return;
+              setEndingImpersonation(true);
+              try {
+                await endImpersonation(impersonation?.sessionId);
+              } catch (error) {
+                toast.error('Händleransicht konnte nicht sicher beendet werden.', {
+                  description: error instanceof Error ? error.message : 'Bitte erneut versuchen.',
+                });
+              } finally {
+                setEndingImpersonation(false);
               }
-              clearActiveImpersonation();
             }}
-            className="font-semibold underline underline-offset-2 hover:opacity-80"
+            className="font-semibold underline underline-offset-2 hover:opacity-80 disabled:cursor-wait disabled:opacity-70"
           >
-            Zurück zum Admin
+            {endingImpersonation ? 'Wird sicher beendet…' : 'Zurück zum Admin'}
           </button>
         </div>
       )}

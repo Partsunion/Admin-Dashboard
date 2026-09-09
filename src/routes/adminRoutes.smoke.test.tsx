@@ -134,9 +134,14 @@ describe('Dashboard-Routen', () => {
             expect(container.querySelector('main')?.textContent ?? container.textContent).toBeTruthy();
         }, { timeout: 5000 });
 
-        // Die Fehlergrenze zeigt diesen Text — sie darf nicht ausgelöst haben.
-        expect(screen.queryByText(/Etwas ist schiefgelaufen/i)).toBeNull();
-        expect(screen.queryByText(/Unerwarteter Fehler/i)).toBeNull();
+        // A handled offline API error is an expected view state. It shares
+        // generic copy with ErrorState, so assert the actual fatal boundaries.
+        expect(screen.queryByRole('heading', { name: /^(Unerwarteter Fehler|Unexpected error)$/i })).toBeNull();
+        expect(screen.queryByRole('heading', { name: 'Neue Version verfügbar' })).toBeNull();
+        if (path === '/tenants') {
+            expect(await screen.findByText('Kunden konnten nicht geladen werden.')).toBeVisible();
+            expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeEnabled();
+        }
     }, 15_000);
 
     it.each(REDIRECTS)('leitet %s weiter', async (path) => {

@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 
 import { TenantProvisioning } from './TenantProvisioningPanel';
+import { TenantDemoPanel } from './TenantDemoPanel';
 import { TenantOperations } from './TenantOperations';
 import { TenantOverview } from './TenantOverview';
 import { TenantReadinessProfile } from './TenantReadinessProfile';
@@ -386,7 +387,7 @@ function TenantDetailWorkspace(): JSX.Element {
                 <nav aria-label="Händlerbereiche" className="mb-6 hidden gap-1 overflow-x-auto border-b border-border sm:flex">
                     {tabs.map(tab => <button key={tab.id} type="button" aria-current={activeTab === tab.id ? 'page' : undefined} onClick={() => setSearchParams({ tab: tab.id })} className={`shrink-0 border-b-2 px-4 py-3 text-sm font-medium ${activeTab === tab.id ? 'border-accent-500 text-accent-500' : 'border-transparent text-text-secondary hover:text-text-primary'}`}>{tab.label}</button>)}
                 </nav>
-                {id && tenant && activeTab === 'onboarding' && <TenantProvisioning tenantId={id} />}
+                {id && tenant && activeTab === 'onboarding' && <div className="space-y-5"><TenantDemoPanel tenantId={id} /><TenantProvisioning tenantId={id} /></div>}
                 {id && tenant && activeTab === 'operations' && <TenantOperations tenantId={id} />}
                 {tenant && activeTab === 'overview' && <TenantOverview tenant={tenant} detail={detail} detailLoading={detailQ.isLoading} detailError={detailQ.isError} retryDetail={() => void detailQ.refetch()} onSection={tab => setSearchParams({ tab })} />}
                 {id && tenant && activeTab === 'profile' && <div className="mb-5"><TenantReadinessProfile tenantId={id} readOnly={!can('tenants.update')} /></div>}

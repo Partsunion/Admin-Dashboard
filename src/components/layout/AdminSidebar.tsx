@@ -61,11 +61,11 @@ interface NavItem {
 type NavTone = 'accent' | 'info' | 'success' | 'warning' | 'danger';
 
 const NAV_TONES: Record<NavTone, string> = {
-  accent: 'bg-accent-500/[0.10] text-accent-500',
-  info: 'bg-info/10 text-info',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  danger: 'bg-danger/10 text-danger',
+  accent: 'bg-[rgb(var(--admin-nav-overlay)/0.045)] text-blue-300',
+  info: 'bg-[rgb(var(--admin-nav-overlay)/0.045)] text-sky-300',
+  success: 'bg-[rgb(var(--admin-nav-overlay)/0.045)] text-emerald-300',
+  warning: 'bg-[rgb(var(--admin-nav-overlay)/0.045)] text-amber-300',
+  danger: 'bg-[rgb(var(--admin-nav-overlay)/0.045)] text-rose-300',
 };
 
 interface NavSection {
@@ -101,7 +101,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: '/tenants', label: 'Händler & Kunden', icon: Building2, tone: 'success', permission: 'tenants.read' },
       { to: '/onboarding', label: 'Einrichtungen', icon: ClipboardCheck, tone: 'accent', permission: 'tenants.read' },
-      { to: '/erp', label: 'ERP-Zentrale', icon: Boxes, tone: 'warning', badge: 'CONTROL' },
+      { to: '/erp', label: 'ERP-Zentrale', icon: Boxes, tone: 'warning' },
       { to: '/orders', label: 'Bestellungen', icon: ShoppingCart, tone: 'info', permission: 'orders.read' },
       { to: '/access-requests', label: 'Zugangsanfragen', icon: KeyRound, tone: 'warning', permission: 'tenants.read' },
     ],
@@ -114,7 +114,7 @@ const NAV_SECTIONS: NavSection[] = [
       // finden. Schreibrechte bleiben in der Ansicht und im Backend separat
       // geschützt; eine Navigationsberechtigung darf den Einstieg nicht
       // unsichtbar machen.
-      { to: '/marketing', label: 'Marketing & Ads', icon: Megaphone, tone: 'danger', badge: 'LIVE' },
+      { to: '/marketing', label: 'Marketing & Ads', icon: Megaphone, tone: 'danger' },
       { to: '/outreach', label: 'Outreach', icon: Send, tone: 'accent', permission: 'emails.send' },
     ],
   },
@@ -204,7 +204,7 @@ export function AdminSidebar({
         // verdecken.
         'admin-sidebar border-r',
         'transition-[width] duration-200 ease-out',
-        collapsed ? 'w-[68px]' : 'w-[272px]',
+        collapsed ? 'w-16' : 'w-64',
         className,
       )}
       aria-label="Hauptnavigation"
@@ -221,7 +221,7 @@ export function AdminSidebar({
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
         <SheetContent
           side="left"
-          className="admin-sidebar w-[272px] border-r p-0"
+          className="admin-sidebar w-64 border-r p-0"
         >
           <SheetTitle className="sr-only">Admin-Navigation</SheetTitle>
           <SheetDescription className="sr-only">Arbeitsbereich auswählen</SheetDescription>
@@ -296,7 +296,7 @@ function SidebarNav({
     }))
     .filter((section) => section.items.length > 0);
   return (
-    <nav className="admin-sidebar-scroll flex-1 overflow-y-auto px-0 pb-3 pt-4" aria-label="Navigation">
+    <nav className="admin-sidebar-scroll flex-1 overflow-y-auto px-0 pb-3 pt-3" aria-label="Navigation">
       {sections.map((section) => (
         <SidebarSection
           key={section.id}
@@ -319,9 +319,9 @@ function SidebarSection({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       {!collapsed && (
-        <div className="mb-1.5 px-[22px] text-[10px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--admin-nav-faint))]">
+        <div className="mb-1 px-[22px] text-[9px] font-bold uppercase tracking-[0.16em] text-[hsl(var(--admin-nav-faint))]">
           {section.label}
         </div>
       )}
@@ -359,13 +359,13 @@ function SidebarLink({
           // Auflage beim Ueberfahren statt deckender Flaeche.
           WORKSPACE_NAV_ITEM,
           'text-[hsl(var(--admin-nav-muted))]',
-          'hover:bg-[rgb(var(--admin-nav-overlay)/0.06)] hover:text-[hsl(var(--admin-nav-text))]',
+          'hover:bg-[rgb(var(--admin-nav-overlay)/0.055)] hover:text-[hsl(var(--admin-nav-text))]',
           collapsed ? 'justify-center px-0' : 'gap-[11px] px-[11px]',
           // Aktiv: waagerechter Akzentverlauf, der nach rechts ausläuft — plus
           // der 2-px-Balken am linken Rand (unten als Element, nicht als
           // inset-Schatten: der wuerde beim Radius mitgerundet).
           isActive &&
-            'bg-[rgb(var(--admin-nav-overlay)/0.09)] text-[hsl(var(--admin-nav-text))] before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-[hsl(var(--admin-nav-signal))]',
+            'bg-[rgb(var(--admin-nav-overlay)/0.09)] text-[hsl(var(--admin-nav-text))] shadow-[inset_0_0_0_1px_rgb(var(--admin-nav-overlay)/0.035)]',
         )
       }
     >
@@ -380,14 +380,14 @@ function SidebarLink({
           )}
           <span
             className={cn(
-              'flex size-7 shrink-0 items-center justify-center rounded-lg transition-[background-color,color,transform] group-hover:scale-105',
-              isActive ? 'bg-[hsl(var(--admin-nav-signal))] text-[hsl(var(--admin-nav-text))] shadow-sm' : NAV_TONES[item.tone],
+              'flex size-7 shrink-0 items-center justify-center rounded-md transition-[background-color,color] duration-150',
+              isActive ? 'bg-[rgb(var(--admin-nav-overlay)/0.10)] text-[hsl(var(--admin-nav-text))]' : NAV_TONES[item.tone],
             )}
           >
             <Icon size={15} aria-hidden />
           </span>
           {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-          {!collapsed && item.badge && <span className="rounded border border-[rgb(var(--admin-nav-overlay)/0.10)] bg-[rgb(var(--admin-nav-overlay)/0.06)] px-1.5 py-0.5 text-[8px] font-bold tracking-[0.12em] text-[hsl(var(--admin-nav-faint))]">{item.badge}</span>}
+          {!collapsed && item.badge && <span className="text-[9px] font-bold tracking-[0.1em] text-[hsl(var(--admin-nav-faint))]">{item.badge}</span>}
         </>
       )}
     </NavLink>

@@ -6,6 +6,7 @@ import type { OnboardingHealthRow } from '@/api/onboarding';
 import OverviewView from './OverviewView';
 
 const state = vi.hoisted(() => ({ canCreate: true, pipelineError: false, mailError: false }));
+vi.mock('@/components/ranking/api', () => ({ loadRanking: async () => { throw new Error('Ranking not configured in overview fixture'); } }));
 vi.mock('@/auth/usePermissions', () => ({ usePermissions: () => ({ can: (permission: string) => permission !== 'tenants.create' || state.canCreate }) }));
 vi.mock('@/hooks/useDashboardMetrics', () => ({ useDashboardMetrics: () => ({ metrics: { activeTenants: 4, totalUsers: 12, ordersToday: null, revenueMtd: null }, isLoading: false, error: null, refetch: vi.fn() }) }));
 vi.mock('@/hooks/useSystemHealth', () => ({ useSystemHealth: () => ({ zustand: { erreichbar: true }, isLoading: false, error: null, refetch: vi.fn() }) }));
@@ -54,15 +55,17 @@ describe('Operational overview', () => {
         expect(screen.getByRole('link', { name: /Posteingang/ })).toHaveTextContent('7');
         await waitFor(() => expect(screen.getByRole('link', { name: /Zugangsanfragen/ })).toHaveTextContent('1'));
     });
-    it('does not turn mailbox failures into zero unread messages', () => {
+    it('does not turn mailbox failures into zero unread messages', async () => {
         state.mailError = true;
         mount();
+        await screen.findByText('Die Rangliste konnte nicht geladen werden.');
         expect(screen.getByRole('link', { name: /Posteingang/ })).toHaveTextContent('Postfachstatus nicht verfügbar');
         expect(screen.getByRole('link', { name: /Posteingang/ })).toHaveTextContent('—');
     });
-    it('does not offer merchant creation to a read-only operator', () => {
+    it('does not offer merchant creation to a read-only operator', async () => {
         state.canCreate = false;
         mount();
+        await screen.findByText('Die Rangliste konnte nicht geladen werden.');
         expect(screen.queryByRole('link', { name: 'Händler einrichten' })).not.toBeInTheDocument();
     });
 });

@@ -1,0 +1,18 @@
+import {fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({create:vi.fn(),toast:vi.fn()}));
+vi.mock('@/hooks/useTenants',()=>({useCreateTenant:()=>({mutateAsync:mocks.create})}));
+vi.mock('sonner',()=>({toast:{error:mocks.toast,success:vi.fn()}}));
+vi.mock('./TenantDemoPanel',()=>({TenantDemoPanel:({tenantId}:{tenantId:string})=><div>Verified account status for {tenantId}</div>}));
+import TenantWizard from './TenantWizard';
+const draft=(extra={})=>({step:4,name:'Nord Autoteile',whatsapp:'',adminEmail:'owner@example.test',usersLimit:10,devicesLimit:5,companyName:'Nord Handel GmbH',companyAddress:'Musterstraße 1',companyZip:'10115',companyCity:'Berlin',iban:'',bankName:'',bic:'',invoicePrefix:'RE-',businessType:'company',smallBusiness:false,vatId:'',taxNumber:'',taxMethod:'',dpaAccepted:false,demoEnabled:false,demoDays:14,...extra});
+function mount(value:unknown){localStorage.setItem('admin.tenantWizard.draft',JSON.stringify(value));return render(<MemoryRouter><TenantWizard/></MemoryRouter>);}
+beforeEach(()=>{localStorage.clear();mocks.toast.mockReset();mocks.create.mockReset().mockResolvedValue({id:'tenant-created',name:'Nord Autoteile',email:'owner@example.test',wawi_synced:true});});
+describe('dealer demo provisioning wizard',()=>{
+  it('includes demo duration in the single tenant creation request',async()=>{mount(draft({demoEnabled:true,demoDays:21}));expect(await screen.findByText('DEMO · 21 Tage')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Kunde erstellen'}));await screen.findByText('Verified account status for tenant-created');expect(mocks.create).toHaveBeenCalledOnce();expect(mocks.create.mock.calls[0][0]).toMatchObject({demo:{days:21},max_users:10,max_devices:5,billing:{company_name:'Nord Handel GmbH'}});});
+  it('does not silently turn ordinary accounts into demos',async()=>{mount(draft());fireEvent.click(screen.getByRole('button',{name:'Kunde erstellen'}));await waitFor(()=>expect(mocks.create).toHaveBeenCalledOnce());expect(mocks.create.mock.calls[0][0]).not.toHaveProperty('demo');});
+  it.each([0,91,1.5])('blocks invalid demo duration %s even from a restored confirmation step',async days=>{mount(draft({demoEnabled:true,demoDays:days}));fireEvent.click(screen.getByRole('button',{name:'Kunde erstellen'}));await screen.findByLabelText('Demodauer in Tagen');expect(mocks.create).not.toHaveBeenCalled();expect(screen.getByRole('button',{name:'Weiter'})).toBeDisabled();});
+  it('preserves old billing draft values when introducing demo fields',async()=>{const old=draft();delete (old as Partial<typeof old>).demoEnabled;delete (old as Partial<typeof old>).demoDays;mount(old);await screen.findByText('Kundenkonto');fireEvent.click(screen.getByRole('button',{name:'Kunde erstellen'}));await waitFor(()=>expect(mocks.create).toHaveBeenCalledOnce());expect(mocks.create.mock.calls[0][0]).toMatchObject({billing:{company_name:'Nord Handel GmbH',company_address:'Musterstraße 1',company_city:'Berlin'}});expect(mocks.create.mock.calls[0][0]).not.toHaveProperty('demo');});
+  it('makes the demo choice explicit and keeps its duration across a remount',async()=>{const view=mount(draft({step:2}));const checkbox=await screen.findByLabelText(/Als Händler-Demo anlegen/);expect(checkbox).not.toBeChecked();fireEvent.click(checkbox);fireEvent.change(screen.getByLabelText('Demodauer in Tagen'),{target:{value:'30'}});view.unmount();render(<MemoryRouter><TenantWizard/></MemoryRouter>);expect(await screen.findByLabelText(/Als Händler-Demo anlegen/)).toBeChecked();expect(screen.getByLabelText('Demodauer in Tagen')).toHaveValue(30);});
+});

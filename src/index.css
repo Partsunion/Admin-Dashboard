@@ -363,3 +363,206 @@ samp {
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── Operations Workbench v3 ─────────────────────────────────────────────
+   Flat, dense and directional. Colour communicates state; it no longer
+   decorates every container. The same geometry is mirrored by CRM. */
+
+.admin-sidebar {
+    box-shadow: 18px 0 44px -38px hsl(220 70% 2% / 0.95);
+}
+
+.admin-sidebar nav a,
+.admin-sidebar button {
+    letter-spacing: -0.006em;
+}
+
+.admin-topbar {
+    background: hsl(var(--bg-surface) / 0.94);
+    box-shadow: 0 1px 0 hsl(var(--border));
+    backdrop-filter: blur(18px) saturate(125%);
+}
+
+[data-workspace="admin"] main {
+    background:
+        linear-gradient(90deg, hsl(var(--accent-500) / 0.025), transparent 22rem),
+        hsl(var(--bg-canvas));
+}
+
+[data-workspace="admin"] main h1 {
+    font-size: clamp(1.65rem, 2vw, 2.1rem);
+    letter-spacing: -0.035em;
+}
+
+.admin-page-intro {
+    overflow: visible;
+    border: 0;
+    border-bottom: 1px solid hsl(var(--border));
+    border-left: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.admin-page-intro::before {
+    content: '';
+    position: absolute;
+    inset: 5px auto 5px -1px;
+    width: 2px;
+    background: hsl(var(--accent-500));
+}
+
+.admin-work-panel {
+    border-color: hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px hsl(220 55% 3% / 0.18);
+}
+
+.admin-work-panel > header {
+    background: hsl(var(--bg-elevated) / 0.34);
+}
+
+.admin-panel-icon,
+.admin-command-icon {
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px currentColor;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.admin-signal-rail {
+    border-radius: 7px;
+    box-shadow: 0 1px 2px hsl(220 55% 3% / 0.16);
+}
+
+.admin-signal-cell {
+    transition: background-color 140ms ease;
+}
+
+a.admin-signal-cell:hover {
+    background: hsl(var(--bg-elevated) / 0.58);
+}
+
+.admin-signal-cell::before {
+    inset: 10px auto 10px 0;
+    width: 2px;
+}
+
+.admin-command-deck {
+    border: 1px solid hsl(var(--border));
+    border-radius: 7px;
+    background: hsl(var(--bg-surface));
+    box-shadow: 0 1px 2px hsl(220 55% 3% / 0.14);
+}
+
+.admin-command-link {
+    min-width: 0;
+    padding: 0.75rem 1rem;
+    border-right: 1px solid hsl(var(--border));
+    transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.admin-command-link:last-child { border-right: 0; }
+
+/* Home overview: typography and dividing rules instead of KPI tiles. */
+.admin-facts-line { display: flex; flex-wrap: wrap; gap: 12px 30px; margin-block: 18px 22px; }
+.admin-facts-line > a { display: flex; align-items: baseline; gap: 10px; }
+.admin-facts-line span { color: hsl(var(--text-muted)); font-size: 11px; }
+.admin-facts-line strong { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.admin-overview .admin-work-panel { background: transparent; border: 0; border-top: 1px solid hsl(var(--border)); border-radius: 0; box-shadow: none; }
+.admin-overview .admin-work-panel > header { background: transparent; }
+.admin-overview .admin-panel-icon { background: transparent; box-shadow: none; width: 20px; height: 20px; }
+.admin-overview .admin-page-intro { padding-inline: 0; }
+.admin-overview .admin-page-intro::before { display: none; }
+.admin-overview .admin-command-deck { display: flex; flex-wrap: wrap; gap: 10px 24px; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.admin-overview .admin-command-link { border: 0; padding: 4px 0; gap: 8px; }
+.admin-overview .admin-command-link strong { font-weight: 550; }
+.admin-overview .admin-command-link > span > span { display: none; }
+.admin-overview .admin-command-icon { width: 22px; height: 22px; background: transparent; box-shadow: none; }
+
+.admin-command-link:hover {
+    background: hsl(var(--bg-elevated) / 0.55);
+    box-shadow: inset 0 -2px 0 currentColor;
+}
+
+.admin-command-icon {
+    display: flex;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    background: hsl(var(--bg-elevated) / 0.7);
+}
+
+.admin-data-table table thead {
+    background: hsl(var(--bg-elevated) / 0.72);
+}
+
+.admin-data-table table tbody tr {
+    transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.admin-data-table table tbody tr:hover {
+    background: hsl(var(--accent-500) / 0.035);
+    box-shadow: inset 2px 0 0 hsl(var(--accent-500));
+}
+
+.admin-erp-flow .admin-command-icon,
+.admin-erp-selector .admin-command-icon { border-radius: 6px; }
+
+.admin-mail-workspace {
+    background: hsl(var(--bg-canvas));
+}
+
+.admin-mail-toolbar {
+    background: hsl(var(--bg-surface) / 0.96);
+    box-shadow: 0 1px 0 hsl(var(--border));
+}
+
+.admin-mail-grid {
+    gap: 0;
+    background: transparent;
+    border-top: 1px solid hsl(var(--border));
+}
+
+.admin-mail-folders {
+    background: hsl(var(--admin-nav-bg));
+    color: hsl(var(--admin-nav-muted));
+    border-right: 1px solid hsl(var(--admin-nav-border));
+}
+
+.admin-mail-folders nav button:hover {
+    background: rgb(var(--admin-nav-overlay) / 0.055);
+}
+
+.admin-mail-list {
+    border-right: 1px solid hsl(var(--border));
+}
+
+.admin-mail-list li > button {
+    transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.admin-mail-list li > button:hover {
+    box-shadow: inset 2px 0 0 hsl(var(--accent-500) / 0.75);
+}
+
+.admin-mail-detail article {
+    max-width: 920px;
+}
+
+[data-workspace="admin"] :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]),
+.admin-mail-workspace :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]) {
+    border-radius: 6px;
+}
+
+@media (max-width: 1023px) {
+    .admin-command-link:nth-child(2) { border-right: 0; }
+    .admin-command-link:nth-child(-n+2) { border-bottom: 1px solid hsl(var(--border)); }
+}
+
+@media (max-width: 639px) {
+    .admin-command-link { border-right: 0; border-bottom: 1px solid hsl(var(--border)); }
+    .admin-command-link:last-child { border-bottom: 0; }
+    .admin-page-intro::before { left: 0; }
+}

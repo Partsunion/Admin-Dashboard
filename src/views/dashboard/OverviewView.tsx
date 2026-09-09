@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -7,13 +7,10 @@ import {
     Boxes,
     Building2,
     CalendarDays,
-    CircleDollarSign,
     KeyRound,
     Mail,
     Megaphone,
     RefreshCw,
-    ShoppingCart,
-    Users,
 } from 'lucide-react';
 import { listAppointments } from '@/api/appointments';
 import { getOnboardingPipeline } from '@/api/onboarding';
@@ -25,7 +22,7 @@ import { useMailboxes } from '@/hooks/useInbox';
 import { zaehleUngeleseneMails } from '@/hooks/useOffeneSachen';
 import { usePermissions } from '@/auth/usePermissions';
 import { SEITEN_RAND, SeitenKopf, HAUPT_AKTION, NEBEN_AKTION } from '@/components/ui/seite';
-import { WORKSPACE_METRIC, WORKSPACE_METRIC_VALUE, WORKSPACE_METRIC_VALUE_LONG } from '@/components/ui/dichte';
+import { RankingTable } from '@/components/ranking/RankingTable';
 import { auditZeile } from '@/utils/auditLabels';
 import { formatRelative } from '@/utils/format/date';
 import { formatCurrency } from '@/utils/format/number';
@@ -53,11 +50,12 @@ function DataMessage({ children, retry, alert = false }: { children: ReactNode; 
 }
 
 function PanelTitle({ id, icon, tone, children }: { id: string; icon: ReactNode; tone: string; children: ReactNode }): JSX.Element {
-    return <div className="flex items-center gap-2.5"><span className={`flex size-8 items-center justify-center rounded-lg ${tone}`}>{icon}</span><h2 id={id} className="text-base font-bold">{children}</h2></div>;
+    return <div className="flex items-center gap-2.5"><span className={`admin-panel-icon flex size-8 items-center justify-center ${tone}`}>{icon}</span><h2 id={id} className="text-[15px] font-bold">{children}</h2></div>;
 }
 
 export default function OverviewView(): JSX.Element {
     const [now, setNow] = useState(() => Date.now());
+    const [rankingRevision, setRankingRevision] = useState(0);
     useEffect(() => {
         const frame = requestAnimationFrame(measureReturn);
         const minute = setInterval(() => setNow(Date.now()), 60_000);
@@ -77,19 +75,20 @@ export default function OverviewView(): JSX.Element {
     const unread = mailbox.isLoading || mailbox.error ? null : zaehleUngeleseneMails(mailbox.mailboxes);
     const refreshing = pipeline.isFetching || appointments.isFetching || access.isFetching;
     const refresh = (): void => {
+        setRankingRevision(value => value + 1);
         void pipeline.refetch(); void appointments.refetch(); void access.refetch();
         metrics.refetch(); health.refetch(); audit.refetch(); mailbox.refetch();
     };
     const facts = [
-        { label: 'Händler', detail: 'auf der Plattform', value: metrics.metrics?.activeTenants, to: '/tenants', icon: Building2, color: 'hsl(var(--success))', iconClass: 'bg-success/10 text-success' },
-        { label: 'Nutzerkonten', detail: 'über alle Händler', value: metrics.metrics?.totalUsers, to: '/tenants', icon: Users, color: 'hsl(var(--info))', iconClass: 'bg-info/10 text-info' },
-        { label: 'Bestellungen heute', detail: 'aktueller Auftragseingang', value: metrics.metrics?.ordersToday, to: '/orders', icon: ShoppingCart, color: 'hsl(var(--warning))', iconClass: 'bg-warning/10 text-warning' },
-        { label: 'Monatsumsatz', detail: 'laufender Monat', value: metrics.metrics?.revenueMtd == null ? null : formatCurrency(metrics.metrics.revenueMtd), to: '/orders', icon: CircleDollarSign, color: 'hsl(var(--accent-500))', iconClass: 'bg-accent-500/[0.10] text-accent-500' },
+        { label: 'Händler', detail: 'auf der Plattform', value: metrics.metrics?.activeTenants, to: '/tenants' },
+        { label: 'Nutzerkonten', detail: 'über alle Händler', value: metrics.metrics?.totalUsers, to: '/tenants' },
+        { label: 'Bestellungen heute', detail: 'aktueller Auftragseingang', value: metrics.metrics?.ordersToday, to: '/orders' },
+        { label: 'Monatsumsatz', detail: 'laufender Monat', value: metrics.metrics?.revenueMtd == null ? null : formatCurrency(metrics.metrics.revenueMtd), to: '/orders' },
     ];
 
     const serviceReady = !health.isLoading && !health.error && Boolean(health.zustand?.erreichbar);
 
-    return <div className={SEITEN_RAND}>
+    return <div className={SEITEN_RAND + ' admin-overview'}>
         <section className="admin-page-intro mb-4 px-5 py-5 md:px-6">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-accent-500">Admin Operations / Heute</span>
@@ -99,22 +98,17 @@ export default function OverviewView(): JSX.Element {
                 aktionen={<><button type="button" className={NEBEN_AKTION} disabled={refreshing} onClick={refresh}><RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />Aktualisieren</button>{can('tenants.create') && <Link to="/tenants/new" className={HAUPT_AKTION}>Händler einrichten</Link>}</>} />
         </section>
 
-        <section aria-label="Plattformzahlen" className="admin-signal-rail mb-3 grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
-            {facts.map(fact => {
-                const Icon = fact.icon;
-                return <Link key={fact.label} to={fact.to} className={`admin-signal-cell group relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 ${WORKSPACE_METRIC}`} style={{ '--signal-color': fact.color } as CSSProperties}>
-                    <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${fact.iconClass}`}><Icon size={16} /></span>
-                    <span className="min-w-0"><span className="block truncate text-xs font-semibold text-text-secondary">{fact.label}</span><span className="mt-0.5 block truncate text-[11px] text-text-muted">{fact.detail}</span></span>
-                    <span className={`max-w-[132px] truncate text-right font-display font-bold leading-none tabular-nums text-text-primary ${fact.label === 'Monatsumsatz' ? WORKSPACE_METRIC_VALUE_LONG : WORKSPACE_METRIC_VALUE}`}>{metrics.isLoading ? '—' : fact.value ?? '—'}</span>
-                </Link>;
-            })}
+        <section aria-label="Plattformzahlen" className="admin-facts-line">
+            {facts.map(fact => <Link key={fact.label} to={fact.to} title={fact.detail}><span>{fact.label}</span><strong>{metrics.isLoading ? '—' : fact.value ?? '—'}</strong></Link>)}
         </section>
 
-        <nav aria-label="Schnellzugriffe" className="mb-5 grid overflow-hidden border border-border bg-surface shadow-xs sm:grid-cols-2 lg:grid-cols-4">
-            <Link to="/erp" className="group flex items-center gap-3 border-b border-border px-4 py-3 transition-colors hover:bg-warning/[0.06] sm:border-r lg:border-b-0"><span className="flex size-8 items-center justify-center rounded-md bg-warning/10 text-warning"><Boxes size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">ERP steuern</strong><span className="block truncate text-[11px] text-text-muted">Lager, Einkauf, Forderungen</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-warning" /></Link>
-            <Link to="/mail" className="group flex items-center gap-3 border-b border-border px-4 py-3 transition-colors hover:bg-info/[0.06] lg:border-b-0 lg:border-r"><span className="flex size-8 items-center justify-center rounded-md bg-info/10 text-info"><Mail size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">Postfach öffnen</strong><span className="block truncate text-[11px] text-text-muted">Antworten und zuordnen</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-info" /></Link>
-            <Link to="/marketing" className="group flex items-center gap-3 border-b border-border px-4 py-3 transition-colors hover:bg-danger/[0.05] sm:border-r lg:border-b-0"><span className="flex size-8 items-center justify-center rounded-md bg-danger/10 text-danger"><Megaphone size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">Marketing & Ads</strong><span className="block truncate text-[11px] text-text-muted">Google, Meta, Website</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-danger" /></Link>
-            <Link to="/onboarding" className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-success/[0.06]"><span className="flex size-8 items-center justify-center rounded-md bg-success/10 text-success"><Building2 size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">Händlerstart</strong><span className="block truncate text-[11px] text-text-muted">Einrichtung und Freigabe</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-success" /></Link>
+        <RankingTable refreshKey={rankingRevision} />
+
+        <nav aria-label="Schnellzugriffe" className="admin-command-deck mb-5 grid overflow-hidden sm:grid-cols-2 lg:grid-cols-4">
+            <Link to="/erp" className="admin-command-link group flex items-center gap-3"><span className="admin-command-icon text-warning"><Boxes size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">ERP steuern</strong><span className="block truncate text-[11px] text-text-muted">Lager, Einkauf, Forderungen</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-warning" /></Link>
+            <Link to="/mail" className="admin-command-link group flex items-center gap-3"><span className="admin-command-icon text-info"><Mail size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">Postfach öffnen</strong><span className="block truncate text-[11px] text-text-muted">Antworten und zuordnen</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-info" /></Link>
+            <Link to="/marketing" className="admin-command-link group flex items-center gap-3"><span className="admin-command-icon text-danger"><Megaphone size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">Marketing & Ads</strong><span className="block truncate text-[11px] text-text-muted">Google, Meta, Website</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-danger" /></Link>
+            <Link to="/onboarding" className="admin-command-link group flex items-center gap-3"><span className="admin-command-icon text-success"><Building2 size={16} /></span><span className="min-w-0 flex-1"><strong className="block text-xs">Händlerstart</strong><span className="block truncate text-[11px] text-text-muted">Einrichtung und Freigabe</span></span><ArrowUpRight size={13} className="text-text-faint group-hover:text-success" /></Link>
         </nav>
 
         {metrics.error ? <p role="alert" className="mb-5 text-sm text-warning">Plattformzahlen konnten nicht aktualisiert werden. Angezeigte Werte können veraltet sein. <button type="button" onClick={metrics.refetch} className={textLink}>Erneut laden</button></p> : !metrics.isLoading && facts.some(fact => fact.value == null) && <p className="mb-5 text-xs text-text-muted">Nicht verfügbare Kennzahlen werden als „—“ angezeigt.</p>}

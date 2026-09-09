@@ -1,16 +1,8 @@
-/**
- * Bildprobe für die Mail-Darstellung — mit einer ECHTEN Mail aus dem Postfach.
- *
- * Anlass: im laufenden Postfach war bei einem Newsletter ein grosser schwarzer
- * Block zu sehen, wo Bilder stehen sollten. Ohne eine Probe mit der echten
- * Nachricht bliebe jede Aussage darüber geraten — Beispiel-HTML zeigt genau die
- * Fälle nicht, die in der Wirklichkeit auftreten.
- *
- * Die Datei `scratchpad/mail-roh.html` ist eine Kopie aus der Datenbank
- * (Mailchimp-Newsletter, 7 Bilder, davon ein 1×1-Zählpixel). Fehlt sie, wird
- * die Probe übersprungen statt rot zu werden.
- */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+/** Reproducible newsletter rendering regression. The checked-in synthetic
+ * fixture covers seven content images and attribute/style tracking pixels.
+ * It contains no mailbox data and all image hosts use the reserved .invalid
+ * domain. This is a regression fixture, not acceptance of a live mailbox. */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -18,16 +10,13 @@ import { sanitizeMailHtml } from '@/lib/sanitizeMailHtml';
 import { aufDunkelUmstellen } from '@/components/mail/mailDunkel';
 import { renderMailRahmen } from '@/components/mail/mailRahmen';
 
-const ROH = join(
-    '/private/tmp/claude-501/-Users-xaaronvx-Desktop--Partsunion-Archiv',
-    '09f30f20-5440-4441-9ec1-3144a1af5a16/scratchpad/mail-roh.html',
-);
+const ROH = join(process.cwd(), 'src/test/fixtures/newsletter-rendering.html');
 const AUSGABE = join(process.cwd(), 'dist-probe');
 
-const vorhanden = existsSync(ROH);
 
-describe.skipIf(!vorhanden)('echte Mail durch die Kette', () => {
-    const roh = vorhanden ? readFileSync(ROH, 'utf8') : '';
+
+describe('Newsletter-Regression durch die vollständige Darstellungskette', () => {
+    const roh = readFileSync(ROH, 'utf8');
 
     /**
      * 1x1/2x2-Bilder im Eingang — die duerfen im Ausgang fehlen. Die
@@ -59,9 +48,9 @@ describe.skipIf(!vorhanden)('echte Mail durch die Kette', () => {
             vorschautext: '',
             kategorieLabel: 'NEWSLETTER',
             kategorieFarbe: '#5B8CFF',
-            absenderName: 'YQ Service s.r.o.',
-            absenderAdresse: 'news@yqservice.eu',
-            absenderInitialen: 'YS',
+            absenderName: 'Test-Teilehandel',
+            absenderAdresse: 'news@dealer.example.invalid',
+            absenderInitialen: 'TT',
             empfangenAm: '30.07.2026, 02:14',
             chips: ['info@partsunion.de'],
             inhaltHtml: kette(),
@@ -75,7 +64,7 @@ describe.skipIf(!vorhanden)('echte Mail durch die Kette', () => {
         writeFileSync(
             join(AUSGABE, 'mail.html'),
             `<!doctype html><html lang="de"><head><meta charset="utf-8">`
-            + `<title>Mail — echte Nachricht</title></head>`
+            + `<title>Mail — synthetische Newsletter-Regression</title></head>`
             + `<body style="margin:0;background:#08090C">${doc}</body></html>`,
             'utf8',
         );

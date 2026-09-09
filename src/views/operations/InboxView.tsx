@@ -448,9 +448,9 @@ export default function InboxView(): JSX.Element {
     }, []);
 
     return (
-        <div className="flex h-full min-h-[520px] flex-col overflow-hidden bg-canvas">
-            <header className="flex min-h-20 shrink-0 items-center gap-3 border-b border-border-subtle bg-surface px-4 py-3 md:px-5">
-                <span aria-hidden className="hidden size-10 shrink-0 items-center justify-center rounded-xl bg-accent-500/10 text-accent-500 sm:flex"><Inbox className="size-5" /></span>
+        <div className="admin-mail-workspace flex h-full min-h-[520px] flex-col overflow-hidden bg-canvas">
+            <header className="admin-mail-toolbar flex min-h-[68px] shrink-0 items-center gap-3 border-b border-border-subtle bg-surface px-4 py-3 md:px-5">
+                <span aria-hidden className="hidden size-9 shrink-0 items-center justify-center rounded-md bg-accent-500/10 text-accent-500 sm:flex"><Inbox className="size-[18px]" /></span>
                 <div className="sr-only shrink-0 sm:not-sr-only">
                     <h1 className="font-display text-xl font-semibold tracking-tight">Postfach</h1>
                     <p className="mt-0.5 text-xs text-text-muted">Kundenkommunikation im Team</p>
@@ -494,7 +494,7 @@ export default function InboxView(): JSX.Element {
             </div>
 
             {/* The reader gets remaining width; message bodies still load only on demand. */}
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-px bg-border-subtle lg:grid-cols-[180px_minmax(280px,340px)_minmax(0,1fr)] xl:grid-cols-[196px_minmax(300px,370px)_minmax(0,1fr)]">
+            <div className="admin-mail-grid grid min-h-0 flex-1 grid-cols-1 gap-px bg-border-subtle lg:grid-cols-[184px_minmax(300px,356px)_minmax(0,1fr)] xl:grid-cols-[196px_minmax(320px,380px)_minmax(0,1fr)]">
                 <MailboxRail
                     folder={folder}
                     mailbox={mailbox}
@@ -508,7 +508,7 @@ export default function InboxView(): JSX.Element {
                 <section
                     aria-label={FOLDER_LABELS[folder]}
                     className={cn(
-                        'flex min-h-0 flex-col overflow-hidden bg-surface',
+                        'admin-mail-list flex min-h-0 flex-col overflow-hidden bg-surface',
                         selected ? 'hidden lg:flex' : 'flex',
                     )}
                 >
@@ -639,7 +639,7 @@ function MailboxRail({
 }): JSX.Element {
     const allUnread = mailboxes.find((item) => item.id === 'all')?.unread ?? 0;
     return (
-        <aside className="hidden min-h-0 flex-col bg-surface lg:flex">
+        <aside className="admin-mail-folders hidden min-h-0 flex-col bg-surface lg:flex">
             <nav className="space-y-1 p-3" aria-label="Mail-Ordner">
                 <RailButton
                     active={folder === 'inbox'}
@@ -894,7 +894,7 @@ function MessageDetail({
         : 'Partsunion';
     const detailAddress = message.from;
     return (
-        <section className="flex min-h-0 flex-col overflow-hidden bg-surface" aria-label="E-Mail-Detail">
+        <section className="admin-mail-detail flex min-h-0 flex-col overflow-hidden bg-surface" aria-label="E-Mail-Detail">
             <div className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2 md:px-5">
                 <Button variant="ghost" size="icon" className="lg:hidden" onClick={onBack} aria-label="Zurück zur E-Mail-Liste">
                     <ArrowLeft className="size-4" />

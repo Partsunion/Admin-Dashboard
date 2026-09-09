@@ -62,9 +62,14 @@ export interface WebsiteAnalytics {
     previous: WebsiteAnalytics['summary'];
     trend: Array<{ date: string; visitors: number; pageviews: number }>;
     pages: Array<{ label: string; visitors: number; pageviews?: number; bounceRate?: number }>;
+    entryPages: Array<{ label: string; visitors: number; visits?: number; bounceRate?: number }>;
     sources: Array<{ label: string; visitors: number }>;
+    channels: Array<{ label: string; visitors: number; visits?: number }>;
+    attribution: Array<{ channel: string; rawChannel: string; source: string; medium: string; campaign: string; content: string; entryPage: string; visitors: number; visits: number }>;
+    pagesByChannel: Array<{ channel: string; page: string; visitors: number; pageviews: number }>;
     regions: Array<{ label: string; country: string; region: string; visitors: number; visits?: number }>;
-    clicks: Array<{ page: string; target: string; placement: string; destination: string; kind: string; clicks: number }>;
+    clicks: Array<{ channel: string; page: string; target: string; placement: string; destination: string; kind: string; clicks: number }>;
+    acquisition: { organicVisits: number; coldOutreachVisits: number; directVisits: number; paidVisits: number };
 }
 
 export interface AdsAccountAnalytics {
@@ -120,3 +125,4 @@ export function updateCampaignBudget(platform: MarketingPlatform, id: string, da
         body: JSON.stringify({ dailyBudget }),
     });
 }
+

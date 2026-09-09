@@ -209,8 +209,14 @@ function beiwerkKopieren(): void {
 
 function gebauteCss(): string | null {
     if (!existsSync(DIST)) return null;
-    const datei = readdirSync(DIST).filter((f) => f.endsWith('.css')).sort()[0];
-    return datei ? readFileSync(join(DIST, datei), 'utf8') : null;
+    // Vite emits a main stylesheet and lazy-view styles. Alphabetical first
+    // used to pick OverviewView.css and silently omit every global utility.
+    const index = readFileSync(join(process.cwd(), 'dist', 'index.html'), 'utf8');
+    const initial = [...index.matchAll(/<link\b[^>]*href="\/assets\/([^"/]+\.css)"[^>]*>/g)]
+        .map((match) => match[1]);
+    if (initial.length === 0) throw new Error('Der Produktionsbuild bindet keine CSS ein.');
+    const lazy = readdirSync(DIST).filter((file) => file.endsWith('.css') && !initial.includes(file)).sort();
+    return [...initial, ...lazy].map((file) => readFileSync(join(DIST, file), 'utf8')).join('\n');
 }
 
 /**
@@ -350,7 +356,7 @@ describe('Bildprobe Redesign', () => {
         // Belegt, dass die Redesign-Merkmale wirklich im Markup stehen und
         // nicht nur im Kopf des Autors.
         expect(markup).toContain('Operations Console');
-        expect(markup).toContain('w-[272px]');
+        expect(markup).toContain('w-64');
         expect(markup).toContain('Händler &amp; Kunden');
         expect(markup).toContain('ERP-Zentrale');
         expect(markup).toContain('Marketing &amp; Ads');

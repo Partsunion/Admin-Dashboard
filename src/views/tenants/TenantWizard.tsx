@@ -28,6 +28,7 @@ import type { CreateTenantResult, TenantBillingInput } from '@/api/tenants';
 import { validateEmail } from '@/utils/validation/email';
 import { copyToClipboard } from '@/utils/clipboard';
 import { buildTenantTaxInput } from './tenantProvisioning';
+import { TenantDemoPanel } from './TenantDemoPanel';
 import { SEITEN_RAND_OHNE_BREITE } from '@/components/ui/seite';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +56,8 @@ interface WizardState {
     taxMethod: '' | 'IST' | 'SOLL';
     // G4 — AVV/DSGVO Art. 28 Zustimmung (Record-Keeping, kein Pflicht-Gate).
     dpaAccepted: boolean;
+    demoEnabled: boolean;
+    demoDays: number;
 }
 
 /** Alte Draft-Versionen persistierten zusätzlich Slug + Klartext-Passwort. */
@@ -87,6 +90,8 @@ const INITIAL: WizardState = {
     taxNumber: '',
     taxMethod: '',
     dpaAccepted: false,
+    demoEnabled: false,
+    demoDays: 14,
 };
 
 const STEPS = ['Stammdaten', 'Kontoinhaber', 'Nutzung', 'Rechnung & Steuer', 'Prüfen'];
@@ -123,7 +128,10 @@ export default function TenantWizard(): JSX.Element {
                 legacy.whatsapp !== undefined &&
                 legacy.companyName !== undefined;
             if (isCurrentShape) {
-                return s;
+                if (typeof s.demoEnabled === 'boolean' && typeof s.demoDays === 'number') return s;
+                // Preserve billing/tax details from existing drafts when adding
+                // the optional demo fields. No old draft becomes a demo implicitly.
+                return { ...s, demoEnabled: false, demoDays: 14 };
             }
             return {
                 ...INITIAL,
@@ -182,6 +190,8 @@ export default function TenantWizard(): JSX.Element {
     const whatsappNormalized = normalizeWhatsapp(state.whatsapp ?? '');
     const whatsappValid = whatsappNormalized === '' || WHATSAPP_RE.test(whatsappNormalized);
 
+    const demoDurationValid = !state.demoEnabled || (Number.isInteger(state.demoDays) && state.demoDays >= 1 && state.demoDays <= 90);
+
     function canProceed(): boolean {
         switch (state.step) {
             case 0:
@@ -195,7 +205,7 @@ export default function TenantWizard(): JSX.Element {
                     state.usersLimit <= 100 &&
                     Number.isInteger(state.devicesLimit) &&
                     state.devicesLimit >= 1 &&
-                    state.devicesLimit <= 50
+                    state.devicesLimit <= 50 && demoDurationValid
                 );
             case 3:
                 return true; // Rechnung & Steuer — alle Felder optional
@@ -232,7 +242,7 @@ export default function TenantWizard(): JSX.Element {
                       state.usersLimit > 100 ||
                       !Number.isInteger(state.devicesLimit) ||
                       state.devicesLimit < 1 ||
-                      state.devicesLimit > 50
+                      state.devicesLimit > 50 || !demoDurationValid
                     ? 2
                     : null;
         if (invalidStep !== null) {
@@ -272,6 +282,7 @@ export default function TenantWizard(): JSX.Element {
                 ...(Object.keys(billing).length ? { billing } : {}),
                 ...(tax ? { tax } : {}),
                 ...(state.dpaAccepted ? { dpa_accepted: true } : {}),
+                ...(state.demoEnabled ? { demo: { days: state.demoDays } } : {}),
             });
 
             setState(() => INITIAL); // Draft leeren
@@ -300,6 +311,7 @@ export default function TenantWizard(): JSX.Element {
                     </p>
                 </header>
 
+                <div className="mb-5"><TenantDemoPanel tenantId={String(result.id)} /></div>
                 <div className="rounded-md border border-border bg-surface/40 p-6 space-y-4">
                     <div className="flex items-center gap-2 text-sm text-success">
                         <Check className="size-4" />
@@ -481,6 +493,10 @@ export default function TenantWizard(): JSX.Element {
 
                 {state.step === 2 && (
                     <>
+                        <div className="space-y-3 rounded-lg border border-border bg-surface/40 p-4">
+                            <label className="flex items-start gap-3" htmlFor="t-demo"><input id="t-demo" type="checkbox" className="mt-1 h-4 w-4" checked={state.demoEnabled ?? false} onChange={event => setState(s => ({ ...s, demoEnabled: event.target.checked }))} /><span><strong>Als Händler-Demo anlegen</strong><span className="mt-1 block text-sm text-text-secondary">Vollständige App mit sichtbarer Demo-Kennzeichnung und zeitlich begrenztem Zugang.</span></span></label>
+                            {state.demoEnabled && <div className="space-y-2"><Label htmlFor="t-demo-days">Demodauer in Tagen</Label><Input id="t-demo-days" type="number" min={1} max={90} step={1} value={state.demoDays} onChange={event => setState(s => ({ ...s, demoDays: Number(event.target.value) }))} /><p className="text-xs text-text-muted">1–90 Tage ab der erfolgreichen Händleranlage. Die Daten bleiben nach Ablauf erhalten.</p></div>}
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="t-users">User-Limit</Label>
                             <Input
@@ -743,6 +759,8 @@ export default function TenantWizard(): JSX.Element {
 
                 {state.step === 4 && (
                     <dl className="grid grid-cols-2 gap-2 text-sm">
+                        <dt className="text-text-secondary">Kontotyp</dt>
+                        <dd className="font-semibold">{state.demoEnabled ? `DEMO · ${state.demoDays} Tage` : 'Kundenkonto'}</dd>
                         <dt className="text-text-secondary">Name</dt>
                         <dd>{state.name}</dd>
                         <dt className="text-text-secondary">WhatsApp-Nummer</dt>
