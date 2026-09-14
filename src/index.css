@@ -529,6 +529,19 @@ a.admin-signal-cell:hover {
     background: hsl(var(--admin-nav-bg));
     color: hsl(var(--admin-nav-muted));
     border-right: 1px solid hsl(var(--admin-nav-border));
+    font-family: var(--font-body);
+}
+
+/* The mail rail is intentionally dark in both themes. Generic workspace text
+   tokens target the light content canvas and made its labels look faded or
+   disappear. Keep every inactive label on the rail's own contrast palette. */
+.admin-mail-folders .text-text-secondary,
+.admin-mail-folders .text-text-muted {
+    color: hsl(var(--admin-nav-muted));
+}
+
+.admin-mail-folders button:hover {
+    color: white;
 }
 
 .admin-mail-folders nav button:hover {

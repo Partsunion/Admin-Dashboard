@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
     Archive,
     ArrowLeft,
-    Download,
+    ExternalLink,
     FilePen,
     FileText,
     Forward,
@@ -33,7 +33,7 @@ import { MailComposer } from '@/components/mail/MailComposer';
 import { originalQuote, prefixSubject, replyRecipients, seedFromDraft, type ComposeSeed } from '@/components/mail/mailCompose';
 
 import {
-    downloadInboxAttachment,
+    openInboxAttachment,
     type InboxFolder,
     getInboxMessage,
 } from '@/api/inbox';
@@ -969,9 +969,16 @@ function MessageDetail({
                                 <button
                                     key={attachment.id}
                                     type="button"
+                                    aria-label={`${attachment.filename || 'Anhang'} öffnen`}
+                                    title="Anhang öffnen"
                                     onClick={async () => {
                                         try {
-                                            await downloadInboxAttachment(message.id, attachment.id, attachment.filename || 'anhang');
+                                            await openInboxAttachment(
+                                                message.id,
+                                                attachment.id,
+                                                attachment.filename || 'anhang',
+                                                attachment.content_type,
+                                            );
                                         } catch (error) {
                                             toast.error(error instanceof Error ? error.message : 'Anhang konnte nicht geladen werden.');
                                         }
@@ -980,7 +987,7 @@ function MessageDetail({
                                 >
                                     <FileText className="size-4 text-accent-500" />
                                     <span className="max-w-52 truncate text-xs text-text-secondary">{attachment.filename || 'Anhang'}</span>
-                                    <Download className="size-3.5 text-text-muted" />
+                                    <ExternalLink className="size-3.5 text-text-muted" />
                                 </button>
                             ))}
                         </div>

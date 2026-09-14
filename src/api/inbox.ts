@@ -563,7 +563,56 @@ export async function downloadInboxAttachment(
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    // Firefox/Safari may not have consumed the object URL when click() returns.
+    // Revoking synchronously made the visible attachment button appear broken.
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+const PREVIEWABLE_ATTACHMENT_TYPES = new Set([
+    'application/pdf',
+    'image/gif',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'text/plain',
+]);
+
+/** Opens safe document/image types in a new tab and downloads other files. */
+export async function openInboxAttachment(
+    messageId: string,
+    attachmentId: string,
+    filename: string,
+    contentType: string,
+): Promise<void> {
+    const normalizedType = contentType.split(';')[0]?.trim().toLowerCase();
+    if (!PREVIEWABLE_ATTACHMENT_TYPES.has(normalizedType)) {
+        await downloadInboxAttachment(messageId, attachmentId, filename);
+        return;
+    }
+
+    // Open the tab during the user gesture. Opening only after await fetch()
+    // is treated as an unsolicited popup by Safari and hardened browsers.
+    const preview = window.open('', '_blank');
+    if (preview) {
+        preview.opener = null;
+        preview.document.title = filename || 'Anhang';
+        preview.document.body.textContent = 'Anhang wird geladen …';
+    }
+
+    try {
+        const blob = await fetchInboxAttachment(messageId, attachmentId);
+        const url = URL.createObjectURL(blob);
+        if (preview && !preview.closed) {
+            preview.location.replace(url);
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+            return;
+        }
+        URL.revokeObjectURL(url);
+        await downloadInboxAttachment(messageId, attachmentId, filename);
+    } catch (error) {
+        preview?.close();
+        throw error;
+    }
 }
 
 /** Authenticated bytes for explicitly selected forward attachments; never fetch message URLs. */
@@ -577,7 +626,10 @@ export async function fetchInboxAttachment(messageId: string, attachmentId: stri
             signal: AbortSignal.timeout(30_000),
         },
     );
-    if (!response.ok) throw new Error('Anhang konnte nicht geladen werden.');
+    if (!response.ok) {
+        const problem = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(problem?.error || 'Anhang konnte nicht geladen werden.');
+    }
     return response.blob();
 }
 
