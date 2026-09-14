@@ -537,7 +537,17 @@ a.admin-signal-cell:hover {
    disappear. Keep every inactive label on the rail's own contrast palette. */
 .admin-mail-folders .text-text-secondary,
 .admin-mail-folders .text-text-muted {
-    color: hsl(var(--admin-nav-muted));
+    color: hsl(var(--admin-nav-muted)) !important;
+}
+
+.admin-mail-folders button:not([aria-pressed="true"]),
+.admin-mail-folders > div > p {
+    color: hsl(var(--admin-nav-muted)) !important;
+    font-weight: 500;
+}
+
+.admin-mail-folders kbd {
+    color: hsl(var(--admin-nav-faint));
 }
 
 .admin-mail-folders button:hover {
