@@ -11,8 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
     Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Loader2, Clock, User, Mail, Phone,
-    MapPin, Check, RotateCcw, CalendarX, Video,
-    CalendarSync, ShieldCheck, AlertTriangle, RefreshCw, CircleHelp, ExternalLink, Workflow,
+    MapPin, Check, RotateCcw, CalendarX, Video, ExternalLink, Workflow,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HAUPT_AKTION, NEBEN_AKTION, SEITEN_RAND, SeitenKopf } from '@/components/ui/seite';
@@ -27,10 +26,8 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
 import {
-    listAppointments, getAppointmentById, listAppointmentAdmins, createAppointment, updateAppointment, cancelAppointment,
-    getMicrosoftCalendarStatus, listMicrosoftCalendarReviews, syncMicrosoftCalendar,
+    listAppointments, listAppointmentAdmins, createAppointment, updateAppointment, cancelAppointment,
     type Appointment, type CreateAppointmentInput,
-    type MicrosoftCalendarReview,
 } from '@/api/appointments';
 import { cn } from '@/lib/utils';
 import { KALENDER_ZELLE } from '@/components/ui/dichte';
@@ -71,17 +68,6 @@ function timeOf(iso: string): string {
 function dayKeyOf(iso: string): string {
     return iso.slice(0, 10);
 }
-function reviewReasonLabel(reason: string | null): string {
-    const value = String(reason || '').toLowerCase();
-    if (value.includes('ambiguous_recipient')) return 'Mehrere mögliche Empfänger – bitte den richtigen Kontakt prüfen.';
-    if (value.includes('multiple_crm_attendees')) return 'Mehrere CRM-Kontakte passen – bitte den zuständigen Kunden wählen.';
-    if (value.includes('crm_match_missing')) return 'Der Empfänger ist eindeutig, aber noch keinem CRM-Kunden zugeordnet.';
-    if (value.includes('insufficient_lead_time')) return 'Der Termin liegt zu nah für die automatische Erinnerung.';
-    if (value.includes('invalid_start') || value.includes('invalid_schedule')) return 'Terminzeit oder Erinnerungszeit konnte nicht sicher bestimmt werden.';
-    if (value.includes('delivery_review_mode')) return 'Der externe Versand wartet auf interne Freigabe.';
-    if (value.includes('versandstatus unklar') || value.includes('provider-timeout')) return 'Der Mailanbieter hat den Versand nicht eindeutig bestätigt. Es wird nicht automatisch erneut gesendet.';
-    return reason || 'Der Agent benötigt eine Rückfrage, bevor er sicher fortfahren kann.';
-}
 function startOfMonth(d: Date): Date { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function buildGrid(cursor: Date): Date[] {
     const first = startOfMonth(cursor);
@@ -95,7 +81,8 @@ function buildGrid(cursor: Date): Date[] {
     });
 }
 
-const emptyForm = (): CreateAppointmentInput & { date?: string; time?: string } => ({
+type AppointmentForm = CreateAppointmentInput & { date?: string; time?: string; managedTeams?: boolean };
+const emptyForm = (): AppointmentForm => ({
     type: 'sales', durationMinutes: 30, sendInvite: true, date: '', time: '10:00',
 });
 
@@ -117,8 +104,6 @@ export default function CalendarView(): JSX.Element {
     const [conflictConfirmed, setConflictConfirmed] = useState(false);
     const saveLock = useRef(false);
     const [detail, setDetail] = useState<Appointment | null>(null);
-    const [syncingMicrosoft, setSyncingMicrosoft] = useState(false);
-    const [reviewsOpen, setReviewsOpen] = useState(false);
     useUnsavedChanges('Kalendertermin', createOpen && formDirty, saving);
 
     const grid = useMemo(() => buildGrid(cursor), [cursor]);
@@ -143,30 +128,9 @@ export default function CalendarView(): JSX.Element {
         queryFn: listAppointmentAdmins,
         staleTime: 5 * 60_000,
     });
-    const microsoftQ = useQuery({
-        queryKey: ['admin', 'appointments', 'microsoft-status'],
-        queryFn: getMicrosoftCalendarStatus,
-        staleTime: 30_000,
-        refetchInterval: 60_000,
-        retry: false,
-    });
-    const reviewsQ = useQuery({
-        queryKey: ['admin', 'appointments', 'microsoft-reviews'],
-        queryFn: () => listMicrosoftCalendarReviews(),
-        enabled: reviewsOpen,
-        staleTime: 15_000,
-        retry: false,
-    });
     const appointments = appointmentsQ.data?.appointments ?? EMPTY_APPOINTMENTS;
     const admins = adminsQ.data?.admins ?? [];
     const loading = appointmentsQ.isFetching;
-    const lastMicrosoftSync = useMemo(() => {
-        const values = (microsoftQ.data?.states || [])
-            .map((state) => state.last_success_at || state.last_sync_at)
-            .filter((value): value is string => Boolean(value));
-        if (values.length === 0) return null;
-        return values.sort((a, b) => b.localeCompare(a))[0];
-    }, [microsoftQ.data?.states]);
 
     const byDay = useMemo(() => {
         const map: Record<string, Appointment[]> = {};
@@ -194,7 +158,13 @@ export default function CalendarView(): JSX.Element {
     // ── Modal öffnen ──────────────────────────────────────────────────────────
     function openCreate(dayKey?: string) {
         setEditingId(null);
-        setForm({ ...emptyForm(), date: dayKey || selectedDay || todayKey });
+        const assigneeId = myId && admins.some((admin) => admin.id === myId) ? myId : undefined;
+        setForm({
+            ...emptyForm(),
+            date: dayKey || selectedDay || todayKey,
+            assigneeId,
+            createTeams: Boolean(admins.find((admin) => admin.id === assigneeId)?.teamsAvailable),
+        });
         setFormDirty(false); setFormErrors({}); setConflicts([]); setConflictConfirmed(false);
         setCreateOpen(true);
     }
@@ -211,6 +181,7 @@ export default function CalendarView(): JSX.Element {
             durationMinutes: a.duration_minutes,
             location: a.location || '',
             meetingLink: a.meeting_link || '',
+            managedTeams: Boolean(a.teams_meeting?.requested),
             sendInvite: false,
             date: dayKeyOf(a.start_at),
             time: timeOf(a.start_at),
@@ -239,6 +210,7 @@ export default function CalendarView(): JSX.Element {
             assigneeId: form.assigneeId, customerName: form.customerName?.trim(), customerEmail: form.customerEmail?.trim(),
             customerPhone: form.customerPhone?.trim(), durationMinutes: form.durationMinutes, location: form.location?.trim(),
             meetingLink: form.meetingLink?.trim() ? safeMeetingUrl(form.meetingLink) : undefined, start, sendInvite: form.sendInvite,
+            createTeams: form.createTeams,
         };
         saveLock.current = true; setSaving(true);
         try {
@@ -256,14 +228,12 @@ export default function CalendarView(): JSX.Element {
                 const res = await updateAppointment(editingId, { ...payload, resendInvite: form.sendInvite });
                 if (res.calendarError) toast.warning(`Termin gespeichert, Teams-Synchronisierung ausstehend: ${res.calendarError}`);
                 else toast.success(res.inviteSent ? 'Termin aktualisiert · Teams und Einladung aktualisiert.' : 'Termin aktualisiert.');
-                if (res.calendarDecision && !res.calendarDecision.eligible) toast.info('Kein Teams-Termin: In den internen Notizen wurde kein eindeutiger digitaler Kundentermin erkannt.');
             } else {
                 const res = await createAppointment(payload);
                 if (res.calendarError) toast.warning(`Termin angelegt, Teams-Synchronisierung ausstehend: ${res.calendarError}`);
                 else if (res.inviteSent) toast.success(res.calendarSynced ? 'Termin und Teams-Call angelegt · Einladung verschickt.' : 'Termin angelegt · Einladung an den Kunden verschickt.');
                 else if (form.sendInvite && form.customerEmail) toast.warning(`Termin angelegt, aber E-Mail nicht versendet: ${res.inviteError || 'unbekannt'}`);
                 else toast.success('Termin angelegt.');
-                if (res.calendarDecision && !res.calendarDecision.eligible) toast.info('Bewusst ohne Teams angelegt: kein eindeutiger digitaler Kundentermin erkannt.');
             }
             setCreateOpen(false);
             setFormDirty(false); setFormErrors({}); setConflicts([]); setConflictConfirmed(false);
@@ -290,46 +260,18 @@ export default function CalendarView(): JSX.Element {
     }
     async function resend(a: Appointment) {
         try {
-            const r = await updateAppointment(a.id, { resendInvite: true });
+            const r = await updateAppointment(a.id, {
+                resendInvite: Boolean(a.customer_email),
+                ...(a.teams_meeting?.requested ? { createTeams: true } : {}),
+            });
             setDetail(r.appointment);
-            if (r.inviteSent && r.appointment.invite_delivery_mode === 'live') toast.success('Einladung an den Lead verschickt.');
-            else if (r.inviteSent) toast.warning('Einladung wurde nur an die interne Testadresse verschickt.');
+            if (r.inviteSent) toast.success('Einladung an den Kunden verschickt.');
+            else if (r.calendarSynced && !a.customer_email) toast.success('Teams-Termin synchronisiert.');
             else toast.warning(`Einladung nicht versendet${r.inviteError ? `: ${r.inviteError}` : '.'}`);
             await appointmentsQ.refetch();
         }
         catch { toast.error('Erneutes Senden fehlgeschlagen.'); }
     }
-    async function syncMicrosoftNow() {
-        setSyncingMicrosoft(true);
-        try {
-            const result = await syncMicrosoftCalendar();
-            if ('skipped' in result) toast.info('Eine Synchronisierung läuft bereits.');
-            else toast.success('Microsoft-365-Kalender und Erinnerungen wurden abgeglichen.');
-            await Promise.all([
-                microsoftQ.refetch(),
-                appointmentsQ.refetch(),
-                ...(reviewsOpen ? [reviewsQ.refetch()] : []),
-            ]);
-        } catch {
-            toast.error('Microsoft-365-Synchronisierung fehlgeschlagen.');
-        } finally {
-            setSyncingMicrosoft(false);
-        }
-    }
-
-    async function openReviewAppointment(review: MicrosoftCalendarReview) {
-        try {
-            const result = await getAppointmentById(review.appointment_id);
-            const date = new Date(`${dayKeyOf(result.appointment.start_at)}T00:00`);
-            setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
-            setSelectedDay(dayKeyOf(result.appointment.start_at));
-            setReviewsOpen(false);
-            setDetail(result.appointment);
-        } catch {
-            toast.error('Der zugehörige Termin konnte nicht geladen werden.');
-        }
-    }
-
     const selDate = new Date(`${selectedDay}T00:00`);
 
     return (
@@ -355,82 +297,6 @@ export default function CalendarView(): JSX.Element {
                     </>
                 }
             />
-
-            {microsoftQ.data && (
-                <section className="karte flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-start gap-3.5">
-                        <div className="grid size-10 shrink-0 place-items-center rounded-[10px] border border-brand/25 bg-brand/10 text-brand">
-                            <CalendarSync className="size-[19px]" />
-                        </div>
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="text-[14px] font-bold text-text">Microsoft 365 · Termin-Automation</h2>
-                                {microsoftQ.data.configured ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-success/25 bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
-                                        <ShieldCheck className="size-3" /> Sicher verbunden
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-warning/25 bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">
-                                        <AlertTriangle className="size-3" /> Einrichtung offen
-                                    </span>
-                                )}
-                            </div>
-                            <p className="mt-1 text-[12px] leading-relaxed text-dim">
-                                Teams-Termine werden Kunden zugeordnet, um {microsoftQ.data.reminderTime} Uhr erinnert und bei Verschiebung oder Absage automatisch aktualisiert.
-                            </p>
-                            {!microsoftQ.data.configured && (
-                                <p className="mt-1.5 text-[10px] text-muted">
-                                    Server-Konfiguration fehlt: {microsoftQ.data.missing.join(', ')}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-5 rounded-xl border border-brand/15 bg-brand/[0.06] px-4 py-3">
-                        <div>
-                            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted">Kalender</p>
-                            <p className="mt-1 text-[14px] font-bold text-text">{microsoftQ.data.mailboxes.length}</p>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted">Geplant</p>
-                            <p className="mt-1 text-[14px] font-bold text-text">{microsoftQ.data.reminders.pending || 0}</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setReviewsOpen(true)}
-                            className={cn(
-                                'rounded-[9px] px-2.5 py-1.5 text-left transition-colors hover:bg-overlay/[0.06]',
-                                (microsoftQ.data.reminders.needs_review || 0) > 0 && 'bg-warning/10',
-                            )}
-                            aria-label={`${microsoftQ.data.reminders.needs_review || 0} Rückfragen öffnen`}
-                        >
-                            <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.18em] text-muted">
-                                Rückfragen <CircleHelp className="size-3" />
-                            </p>
-                            <p className={cn('mt-1 text-[14px] font-bold', (microsoftQ.data.reminders.needs_review || 0) > 0 ? 'text-warning' : 'text-text')}>
-                                {microsoftQ.data.reminders.needs_review || 0}
-                            </p>
-                        </button>
-                        <div className="min-w-[150px]">
-                            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-brand">Automatisch aktiv</p>
-                            <p className="mt-1 text-[11px] text-dim">
-                                Alle {Math.max(1, Math.round((microsoftQ.data.syncIntervalSeconds || 300) / 60))} Min.
-                                {lastMicrosoftSync ? ` · zuletzt ${new Date(lastMicrosoftSync).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                            </p>
-                        </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            disabled={!microsoftQ.data.configured || syncingMicrosoft}
-                            onClick={() => void syncMicrosoftNow()}
-                            className="size-9 rounded-[9px] p-0"
-                            aria-label="Microsoft 365 jetzt zusätzlich prüfen"
-                            title="Jetzt zusätzlich prüfen"
-                        >
-                            <RefreshCw className={cn('size-3.5', syncingMicrosoft && 'animate-spin')} />
-                        </Button>
-                    </div>
-                </section>
-            )}
 
             {appointmentsQ.isError && (
                 <div className="flex items-center justify-between gap-3 rounded-[14px] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -559,74 +425,6 @@ export default function CalendarView(): JSX.Element {
                 </div>
             </div>
 
-            {/* Nur echte Unsicherheiten: eindeutige Fälle erledigt der Agent selbst. */}
-            <Dialog open={reviewsOpen} onOpenChange={setReviewsOpen}>
-                <DialogContent className="max-h-[88vh] overflow-hidden p-0 sm:max-w-[680px]">
-                    <DialogHeader className="border-b border-overlay/[0.07] px-6 py-5">
-                        <DialogTitle className="flex items-center gap-2">
-                            <CircleHelp className="size-5 text-warning" /> Rückfragen der Termin-Automation
-                        </DialogTitle>
-                        <DialogDescription>
-                            Eindeutige Termine und E-Mails verarbeitet der Agent selbstständig. Hier erscheinen ausschließlich Fälle, bei denen eine sichere Entscheidung nicht möglich ist.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="max-h-[64vh] overflow-y-auto px-6 py-4">
-                        {reviewsQ.isLoading && (
-                            <div className="flex items-center justify-center gap-2 py-12 text-sm text-dim">
-                                <Loader2 className="size-4 animate-spin" /> Rückfragen werden geladen …
-                            </div>
-                        )}
-                        {reviewsQ.isError && (
-                            <div className="rounded-[12px] border border-danger/25 bg-danger/10 px-4 py-4 text-sm text-danger">
-                                Rückfragen konnten nicht geladen werden.
-                            </div>
-                        )}
-                        {!reviewsQ.isLoading && !reviewsQ.isError && (reviewsQ.data?.reviews.length || 0) === 0 && (
-                            <div className="py-12 text-center">
-                                <ShieldCheck className="mx-auto size-8 text-success" />
-                                <p className="mt-3 text-sm font-bold text-text">Keine Rückfragen offen</p>
-                                <p className="mt-1 text-xs text-dim">Alle eindeutigen Fälle wurden automatisch verarbeitet.</p>
-                            </div>
-                        )}
-                        <div className="space-y-3">
-                            {reviewsQ.data?.reviews.map((review) => (
-                                <article key={review.id} className="rounded-[13px] border border-warning/25 bg-warning/[0.06] p-4">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div className="min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning">Rückfrage</span>
-                                                <span className="font-mono text-[10px] text-muted">{Math.round(Number(review.match_confidence || 0) * 100)} % Zuordnung</span>
-                                            </div>
-                                            <h3 className="mt-2 truncate text-[14px] font-bold text-text">{review.title}</h3>
-                                            <p className="mt-1 text-[12px] text-dim">
-                                                {dayKeyOf(review.start_at).split('-').reverse().join('.')} · {timeOf(review.start_at)} Uhr
-                                            </p>
-                                        </div>
-                                        <Button size="sm" variant="outline" onClick={() => void openReviewAppointment(review)}>
-                                            Termin öffnen <ExternalLink className="size-3.5" />
-                                        </Button>
-                                    </div>
-                                    <div className="mt-3 rounded-[10px] border border-overlay/[0.07] bg-overlay/[0.035] px-3.5 py-3">
-                                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted">Was ist unklar?</p>
-                                        <p className="mt-1.5 text-[12px] leading-relaxed text-text-secondary">{reviewReasonLabel(review.review_reason)}</p>
-                                    </div>
-                                    <div className="mt-3 grid gap-2 text-[11px] text-dim sm:grid-cols-2">
-                                        <span className="flex min-w-0 items-center gap-2"><Mail className="size-3.5 shrink-0" /><span className="truncate">{review.recipient_email}</span></span>
-                                        <span className="flex min-w-0 items-center gap-2"><User className="size-3.5 shrink-0" /><span className="truncate">{review.external_organizer_email || review.external_calendar_user || 'Nicht zugeordnet'}</span></span>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-                    <DialogFooter className="border-t border-overlay/[0.07] px-6 py-4">
-                        <Button variant="outline" onClick={() => setReviewsOpen(false)}>Schließen</Button>
-                        <Button onClick={() => void syncMicrosoftNow()} disabled={syncingMicrosoft}>
-                            <RefreshCw className={cn('size-4', syncingMicrosoft && 'animate-spin')} /> Erneut prüfen
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
             {/* Create / Edit Modal */}
             <Dialog open={createOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
                 <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-[560px]">
@@ -650,7 +448,14 @@ export default function CalendarView(): JSX.Element {
                             </div>
                             <div className="grid gap-1.5">
                                 <Label>Zuständig</Label>
-                                <Select value={form.assigneeId || 'none'} onValueChange={(v) => changeForm((f) => ({ ...f, assigneeId: v === 'none' ? undefined : v }))}>
+                                <Select disabled={form.managedTeams} value={form.assigneeId || 'none'} onValueChange={(v) => changeForm((f) => {
+                                    const assigneeId = v === 'none' ? undefined : v;
+                                    return {
+                                        ...f,
+                                        assigneeId,
+                                        createTeams: Boolean(f.createTeams && admins.find((admin) => admin.id === assigneeId)?.teamsAvailable),
+                                    };
+                                })}>
                                     <SelectTrigger><SelectValue placeholder="Niemand" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">— Niemand —</SelectItem>
@@ -705,14 +510,33 @@ export default function CalendarView(): JSX.Element {
                             </div>
                             <div className="grid gap-1.5">
                                 <Label htmlFor="admin-appointment-meeting-link">Meeting-Link</Label>
-                                <Input id="admin-appointment-meeting-link" value={form.meetingLink || ''} placeholder="https://meet…" aria-invalid={!!formErrors.meetingLink} aria-describedby={formErrors.meetingLink ? 'admin-appointment-meeting-link-error' : undefined} onChange={(e) => changeForm((f) => ({ ...f, meetingLink: e.target.value }))} />
+                                <Input id="admin-appointment-meeting-link" disabled={form.createTeams || form.managedTeams} value={form.meetingLink || ''} placeholder={form.createTeams ? 'Wird beim Speichern erstellt' : 'https://meet…'} aria-invalid={!!formErrors.meetingLink} aria-describedby={formErrors.meetingLink ? 'admin-appointment-meeting-link-error' : undefined} onChange={(e) => changeForm((f) => ({ ...f, meetingLink: e.target.value }))} />
                                 {formErrors.meetingLink && <p id="admin-appointment-meeting-link-error" className="text-xs font-medium text-destructive">{formErrors.meetingLink}</p>}
                             </div>
                         </div>
+                        {form.managedTeams ? (
+                            <p className="text-xs text-muted-foreground">Mit Teams verbunden. Änderungen an Zeit und Titel werden im Microsoft-Kalender des Organisators übernommen.</p>
+                        ) : admins.find((admin) => admin.id === form.assigneeId)?.teamsAvailable ? (
+                            <label className="flex items-start gap-2 rounded-lg border bg-muted/30 p-2.5 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(form.createTeams)}
+                                    onChange={(event) => changeForm((current) => ({
+                                        ...current,
+                                        createTeams: event.target.checked,
+                                        ...(event.target.checked ? { meetingLink: '' } : {}),
+                                    }))}
+                                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                                />
+                                <span>Teams-Besprechung automatisch erstellen<span className="mt-1 block text-xs text-muted-foreground">Der Beitrittslink wird in die Kunden-E-Mail und den Kalenderanhang übernommen.</span></span>
+                            </label>
+                        ) : (
+                            <p className="text-xs text-muted-foreground">Für diese Person ist kein Teams-Kalender verbunden. Du kannst einen vorhandenen Meeting-Link einfügen.</p>
+                        )}
                         <div className="grid gap-1.5">
-                            <Label>Notizen <span className="text-muted-foreground">(steuern Teams automatisch)</span></Label>
+                            <Label>Interne Notizen</Label>
                             <Textarea rows={2} value={form.notes || ''} placeholder="z. B. Teams-Beratung / vor Ort / telefonischer Rückruf" onChange={(e) => changeForm((f) => ({ ...f, notes: e.target.value }))} />
-                            <p className="text-xs text-muted-foreground">Der Terminmanager liest diese internen Notizen. Digitale Quali-/Sales-Termine erhalten automatisch einen Teams-Link; vor Ort, Telefon und interne Blöcke nicht.</p>
+                            <p className="text-xs text-muted-foreground">Diese Notizen bleiben intern und werden nicht an den Kunden geschickt.</p>
                         </div>
                         {conflicts.length > 0 && (
                             <div role="alert" className="rounded-xl border border-amber-300/70 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
@@ -781,7 +605,7 @@ export default function CalendarView(): JSX.Element {
                                     {!detail.meeting_link && detail.location && <Row icon={<MapPin className="size-4" />} text={detail.location} />}
                                     {detail.notes && <div className="break-words [overflow-wrap:anywhere] rounded-lg border bg-muted/30 p-2.5 text-sm text-muted-foreground">{detail.notes}</div>}
                                     {detail.website_booking && <WebsiteBookingStatus appointment={detail} />}
-                                    {!detail.website_booking && (detail.external_calendar_user || detail.source === 'microsoft' || detail.meeting_link || detail.customer_email) && (
+                                    {!detail.website_booking && (detail.teams_meeting?.requested || detail.external_calendar_user || detail.source === 'microsoft' || detail.meeting_link || detail.customer_email) && (
                                         <OfficeFlow appointment={detail} />
                                     )}
                                 </div>
@@ -789,6 +613,7 @@ export default function CalendarView(): JSX.Element {
                                     <div className="grid grid-cols-1 gap-2 border-t pt-4 sm:grid-cols-2">
                                         <Button size="sm" variant="outline" className="w-full" onClick={() => openEdit(detail)}><RotateCcw className="size-4" /> Verschieben/Bearbeiten</Button>
                                         {detail.customer_email && <Button size="sm" variant="outline" className="w-full" onClick={() => resend(detail)}><Mail className="size-4" /> Erneut einladen</Button>}
+                                        {!detail.customer_email && detail.teams_meeting?.state === 'failed' && <Button size="sm" variant="outline" className="w-full" onClick={() => resend(detail)}><Video className="size-4" /> Teams synchronisieren</Button>}
                                         <Button size="sm" variant="destructive" className="w-full sm:col-span-2" onClick={() => doCancel(detail)}><CalendarX className="size-4" /> Termin absagen</Button>
                                     </div>
                                 )}
@@ -831,7 +656,7 @@ function OfficeFlow({ appointment }: { appointment: Appointment }) {
         : microsoftManagedInvite
             ? 'Einladung in Microsoft 365 vorhanden'
         : appointment.invite_sent_at
-            ? appointment.invite_delivery_mode === 'test' ? 'Einladung nur intern getestet' : 'Einladungsversand protokolliert'
+            ? appointment.invite_delivery_mode === 'test' ? 'Einladung nur intern getestet' : 'Einladung an Kunden versendet'
             : appointment.invite_email_error ? 'Einladung nicht versendet' : 'Noch keine Einladung versendet';
     const cancellationLabel = cancellationToLead
         ? 'Absage an Lead versendet'
@@ -839,9 +664,9 @@ function OfficeFlow({ appointment }: { appointment: Appointment }) {
             ? appointment.cancellation_delivery_mode === 'test' ? 'Absage nur intern getestet' : 'Absageversand protokolliert'
             : appointment.status === 'cancelled' ? 'Absage-E-Mail nicht versendet' : null;
     const steps = [
-        { label: 'Kalender synchron', active: !!(appointment.external_calendar_user || appointment.source === 'microsoft_graph') },
+        { label: 'Kalender synchron', active: appointment.teams_meeting?.state === 'ready' || !!(appointment.external_calendar_user || appointment.source === 'microsoft_graph') },
         { label: 'Teams bereit', active: !!appointment.meeting_link },
-        { label: inviteLabel, active: inviteToLead || microsoftManagedInvite },
+        { label: inviteLabel, active: inviteToLead || microsoftManagedInvite || Boolean(appointment.invite_sent_at && appointment.invite_delivery_mode !== 'test') },
         ...(cancellationLabel ? [{ label: cancellationLabel, active: cancellationToLead }] : []),
     ];
     return (
@@ -860,6 +685,11 @@ function OfficeFlow({ appointment }: { appointment: Appointment }) {
             {(appointment.invite_email_error || appointment.cancellation_email_error) && (
                 <p className="mt-2 border-t pt-2 text-[11px] leading-4 text-amber-500">
                     {appointment.cancellation_email_error || appointment.invite_email_error}
+                </p>
+            )}
+            {appointment.teams_meeting?.state === 'failed' && appointment.teams_meeting.error && (
+                <p className="mt-2 border-t pt-2 text-[11px] leading-4 text-amber-500">
+                    Teams-Synchronisierung fehlgeschlagen: {appointment.teams_meeting.error}
                 </p>
             )}
         </div>

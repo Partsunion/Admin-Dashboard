@@ -17,6 +17,12 @@ export interface WebsiteBooking {
 }
 
 export interface Appointment {
+    teams_meeting?: {
+        requested?: boolean;
+        state?: 'pending' | 'ready' | 'failed' | 'cancelled';
+        error?: string;
+    };
+    invitation_from?: string | null;
     id: string;
     type: AppointmentType | string;
     title: string;
@@ -56,53 +62,16 @@ export function retryWebsiteConfirmation(id: string): Promise<{ok: boolean}> {
     return apiFetch(`/api/admin/consultations/${encodeURIComponent(id)}/confirmation`, {method:'POST',body:JSON.stringify({})});
 }
 
-export interface MicrosoftCalendarState {
-    calendar_user: string;
-    sync_status: string;
-    last_sync_at: string | null;
-    last_success_at: string | null;
-    last_error: string | null;
-    events_seen: number;
-    events_imported: number;
-    review_count: number;
-}
-
-export interface MicrosoftCalendarStatus {
-    configured: boolean;
-    missing: string[];
-    mailboxes: string[];
-    reminderTime: string;
-    syncIntervalSeconds: number;
-    timeZone: string;
-    states: MicrosoftCalendarState[];
-    reminders: Record<string, number>;
-}
-
-export interface MicrosoftCalendarReview {
-    id: string;
-    status: 'needs_review';
-    recipient_email: string;
-    recipient_name: string | null;
-    match_method: 'exact_email' | 'company_domain' | 'none' | 'ambiguous' | string;
-    match_confidence: number;
-    review_reason: string | null;
-    scheduled_for: string | null;
-    appointment_id: string;
-    title: string;
-    start_at: string;
-    meeting_link: string | null;
-    external_calendar_user: string | null;
-    external_organizer_email: string | null;
-}
-
 export interface AppointmentAdmin {
     id: string;
     username: string;
     name: string;
     email: string;
+    teamsAvailable?: boolean;
 }
 
 export interface CreateAppointmentInput {
+    createTeams?: boolean;
     type?: AppointmentType;
     title?: string;
     notes?: string;
@@ -173,16 +142,4 @@ export interface CancellationResult {
 
 export function cancelAppointment(id: string): Promise<CancellationResult> {
     return apiFetch<CancellationResult>(`${BASE}/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) });
-}
-
-export function getMicrosoftCalendarStatus(): Promise<MicrosoftCalendarStatus> {
-    return apiFetch<MicrosoftCalendarStatus>(`${BASE}/microsoft/status`);
-}
-
-export function listMicrosoftCalendarReviews(limit = 50): Promise<{ reviews: MicrosoftCalendarReview[] }> {
-    return apiFetch<{ reviews: MicrosoftCalendarReview[] }>(`${BASE}/microsoft/reviews?limit=${Math.max(1, Math.min(limit, 100))}`);
-}
-
-export function syncMicrosoftCalendar(): Promise<Record<string, unknown>> {
-    return apiFetch<Record<string, unknown>>(`${BASE}/microsoft/sync`, { method: 'POST', body: JSON.stringify({}) });
 }
