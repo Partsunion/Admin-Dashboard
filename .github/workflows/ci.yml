@@ -31,7 +31,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Partsunion/crm-system
-          ref: ab603d928227fb6d8b5cd86f2c3d3c3aadca0efb
+          # Keep the cross-workspace shell contract pinned to the CRM
+          # release that is paired with this Admin release.
+          ref: 98b72926ecb08be76b9a8e41bc00f34be24d0892
           path: CRM-System
           persist-credentials: false
 
