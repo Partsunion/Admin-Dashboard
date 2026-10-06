@@ -57,7 +57,7 @@ jobs:
           VITE_SCRAPER_BASE_URL: https://api.partsunion.de
 
       - name: Unit tests and built-CSS probes
-        run: npm run test:run -- --maxWorkers=2
+        run: npm run test:run
         env:
           VITE_API_BASE_URL: http://localhost:3000
           VITE_SCRAPER_BASE_URL: http://localhost:3001

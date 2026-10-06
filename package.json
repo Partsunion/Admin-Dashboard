@@ -16,7 +16,8 @@
     "lint:fix": "eslint src --fix",
     "verify": "npm run typecheck && npm run lint && npm run test:run",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "vitest run --maxWorkers=2 && npm run test:braces-security",
+    "test:braces-security": "node --test scripts/__tests__/braces-security-fork.node.mjs",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test"
   },
@@ -108,6 +109,10 @@
     "vitest": "^4.0.18"
   },
   "overrides": {
+    "brace-expansion@^1.1.7": "1.1.21",
+    "brace-expansion@^5.0.8": "5.0.12",
+    "braces": "file:../../vendor/partsunion-braces",
+    "source-map-js": "1.2.2",
     "vitest": {
       "vite": "^6.4.3"
     }
