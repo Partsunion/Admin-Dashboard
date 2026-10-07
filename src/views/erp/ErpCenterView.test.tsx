@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Order, Tenant } from '@/api/types';
+vi.mock('./VehicleFullscanQueue',()=>({VehicleFullscanQueue:()=>null}));
 
 const state = vi.hoisted(() => ({ ordersError: false, tenantsError: false }));
 const orders: Order[] = [

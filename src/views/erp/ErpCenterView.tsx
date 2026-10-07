@@ -25,6 +25,7 @@ import { SEITEN_RAND, HAUPT_AKTION, NEBEN_AKTION } from '@/components/ui/seite';
 import { SEITEN_TITEL } from '@/components/ui/dichte';
 import { cn } from '@/lib/utils';
 import { erpOrderSummary, erpTenantSummary, recentOperationalOrders } from './erpMetrics';
+import {VehicleFullscanQueue} from './VehicleFullscanQueue';
 
 const workflow = [
     { status: 'new' as const, label: 'Neu eingegangen', tone: 'bg-accent-500' },
@@ -200,6 +201,7 @@ export default function ErpCenterView(): JSX.Element {
             {!tenantsKnown ? <p className="px-5 py-8 text-sm text-text-muted">Händlerdaten stehen derzeit nicht zur Verfügung.</p> : selectedExists ? <div className="p-5"><TenantOperations tenantId={selectedTenant} /></div> : <div className="grid gap-0 md:grid-cols-[1fr_1.2fr] md:divide-x md:divide-border"><div className="flex items-start gap-3 px-5 py-7"><span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-info/10 text-info"><Building2 size={19} /></span><div><strong className="block text-sm">Betrieb oben auswählen</strong><p className="mt-1 max-w-md text-xs leading-relaxed text-text-muted">Danach erscheinen reale Warenwirtschaftsdaten dieses Händlers – inklusive offener Forderungen, Mindestbestände und Beschaffung.</p></div></div><dl className="grid grid-cols-2 gap-x-5 gap-y-4 bg-elevated/35 px-5 py-6"><div><dt className="text-xs text-text-muted">Händler gesamt</dt><dd className="mt-1 font-display text-xl font-bold tabular-nums">{tenantSummary.total}</dd></div><div><dt className="text-xs text-text-muted">Nutzerkonten</dt><dd className="mt-1 font-display text-xl font-bold tabular-nums">{tenantSummary.users}</dd></div><div><dt className="text-xs text-text-muted">Einrichtung offen</dt><dd className="mt-1 font-display text-xl font-bold tabular-nums text-info">{tenantSummary.onboardingOpen}</dd></div><div><dt className="text-xs text-text-muted">Zahlungsbedarf</dt><dd className="mt-1 font-display text-xl font-bold tabular-nums text-danger">{tenantSummary.paymentAttention}</dd></div></dl></div>}
         </section>
 
+        <VehicleFullscanQueue/>
         <footer className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted"><span className="inline-flex items-center gap-1.5"><Users size={13} />Zentrale Steuerung mit Drill-down je Händler</span><Link to="/tenants" className="font-semibold text-accent-500 hover:underline">Händlerakten öffnen</Link></footer>
     </div>;
 }
