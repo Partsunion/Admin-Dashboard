@@ -8,6 +8,7 @@ import {
     GeneratedEmailSchema,
     EmailRecipientSchema,
     parseApiResponse,
+    parseApiResponseStrict,
     type EmailRecipient,
     type EmailTemplate,
     type GeneratedEmail,
@@ -47,16 +48,18 @@ export async function getEmailRecipients(
     };
 }
 
-export async function sendMarketingEmail(
-    subject: string,
-    htmlContent: string,
-    recipientType?: string,
-    customEmails?: string[]
-): Promise<{ success: boolean; sent: number; failed: number; total: number }> {
-    return apiFetch('/api/admin/emails/send', {
-        method: 'POST',
-        body: JSON.stringify({ subject, htmlContent, recipientType, customEmails }),
-    });
+const CampaignResultSchema=z.object({requestId:z.string().uuid(),success:z.boolean(),status:z.enum(['completed','unknown']),
+    sent:z.number().int().nonnegative(),accepted:z.number().int().nonnegative(),failed:z.number().int().nonnegative(),unknown:z.number().int().nonnegative(),pending:z.number().int().nonnegative(),total:z.number().int().positive(),delivery_confirmed:z.literal(false)})
+    .refine(result=>result.sent===result.accepted&&result.accepted+result.failed+result.unknown+result.pending===result.total
+        &&result.success===(result.status==='completed')&&result.success===(result.unknown===0&&result.pending===0),'Unvollständiger Versandnachweis');
+export type MarketingCampaignResult=z.infer<typeof CampaignResultSchema>;
+/** Caller supplies its original decision UUID on every retry. */
+export async function sendMarketingEmail(subject:string,htmlContent:string,recipientType?:string,customEmails?:string[],requestId?:string):Promise<MarketingCampaignResult>{
+    if(!requestId||!z.string().uuid().safeParse(requestId).success)throw new Error('Der ursprüngliche Versandauftrag requestId ist erforderlich.');
+    const raw=await apiFetch<unknown>('/api/admin/emails/send',{method:'POST',headers:{'Idempotency-Key':requestId},body:JSON.stringify({requestId,subject,htmlContent,recipientType,customEmails})});
+    const result=parseApiResponseStrict(CampaignResultSchema,raw);
+    if(result.requestId.toLowerCase()!==requestId.toLowerCase())throw new Error('Versandnachweis gehört zu einem anderen Auftrag.');
+    return result;
 }
 
 export async function getSavedTemplates(): Promise<EmailTemplate[]> {
